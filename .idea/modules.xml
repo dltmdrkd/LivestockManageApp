@@ -4,6 +4,8 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/LivestockManageApp.iml" filepath="$PROJECT_DIR$/LivestockManageApp.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Data/data.iml" filepath="$PROJECT_DIR$/Data/data.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Network/network.iml" filepath="$PROJECT_DIR$/Network/network.iml" />
     </modules>
   </component>
 </project>
