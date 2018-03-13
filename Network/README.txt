@@ -1,1 +1,0 @@
-this is network module (include bluetooth) for LivestockManageApp
