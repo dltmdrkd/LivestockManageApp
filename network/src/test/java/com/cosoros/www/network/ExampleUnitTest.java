@@ -1,4 +1,4 @@
-package com.cosoros.network;
+package com.cosoros.www.network;
 
 import org.junit.Test;
 

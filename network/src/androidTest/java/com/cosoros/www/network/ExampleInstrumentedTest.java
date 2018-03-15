@@ -1,4 +1,4 @@
-package com.cosoros.network;
+package com.cosoros.www.network;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getTargetContext();
 
-        assertEquals("com.cosoros.network.test", appContext.getPackageName());
+        assertEquals("com.cosoros.www.network.test", appContext.getPackageName());
     }
 }
