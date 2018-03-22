@@ -9,7 +9,7 @@ import java.util.Date;
 /**
  * Created by dltmd on 3/16/2018.
  * Parser received packet from Receiver through Bluetooth module.
- * Format : [(1) LENGTH(4) SRC_ID(4) DST_ID(4) CMD(2) LATITUDE(12) ^(1) LONGTITUDE(12) ^(1) ALTITUDE(6) ^(1) CNT_SAT(2) ^(1) DATE(8) ^(1) TIME(6) ^(1) VOLTAGE(5) ^(1) ](1)
+ * Format : [(1) LENGTH(4) SRC_ID(4) DST_ID(4) CMD(2) LATITUDE(12) ^(1) LONGITUDE(12) ^(1) ALTITUDE(6) ^(1) CNT_SAT(2) ^(1) DATE(8) ^(1) TIME(6) ^(1) VOLTAGE(5) ^(1) ](1)
  * Example : [ 0048 0002 007f A0 000036.08055 ^ 000129.39787 ^ 027.00 ^ 03 ^ 20180316 ^ 151233 ^ 03.50 ^ ]
  */
 
@@ -18,7 +18,7 @@ public class Parser {
     }
 
     static final int posLatitude = 15, countLatitude = 12;
-    static final int posLongtitude = 28, countLongtitude = 12;
+    static final int posLongitude = 28, countLongitude = 12;
     static final int posAltitude = 41, countAltitude = 6;
     static final int posSatelliteCount = 48, countSatelliteCount = 2;
     static final int posDate = 51, countDate = 8;
@@ -35,7 +35,7 @@ public class Parser {
         if (data.length() == Integer.parseInt("4A", 16)) {
             // only process valid data length.
             double latitude = Double.parseDouble(split(data, posLatitude, countLatitude));
-            double longtitude = Double.parseDouble(split(data, posLongtitude, countLongtitude));
+            double longitude = Double.parseDouble(split(data, posLongitude, countLongitude));
             double altitude = Double.parseDouble(split(data, posAltitude, countAltitude));
             int satelliteCount = Integer.parseInt(split(data, posSatelliteCount, countSatelliteCount));
             String datetimeStr = split(data, posDate, countDate);
@@ -50,7 +50,7 @@ public class Parser {
                 return info;
             }
             float voltage = Float.parseFloat(split(data, posVoltage, countVoltage));
-            info.setValues(latitude, longtitude, altitude, satelliteCount, datetime, voltage);
+            info.setValues(latitude, longitude, altitude, satelliteCount, datetime, voltage);
         }
         return info;
     }

@@ -14,7 +14,7 @@ public class LivestockInfo {
     public LivestockInfo(LivestockInfo src) {
         _valid = src.isValid();
         _latitude = src.latitude();
-        _longtitude = src.longtitude();
+        _longtitude = src.longitude();
         _altitude = src.altitude();
         _satelliteCount = src.satelliteCount();
         _timestamp = src.timestamp();
@@ -37,7 +37,7 @@ public class LivestockInfo {
         return _latitude;
     }
 
-    public double longtitude() {
+    public double longitude() {
         return _longtitude;
     }
 
@@ -57,9 +57,9 @@ public class LivestockInfo {
         return _voltage;
     }
 
-    public void setValues(double latitude, double longtitude, double altitude, int satelliteCount, Date timestamp, float voltage) {
+    public void setValues(double latitude, double longitude, double altitude, int satelliteCount, Date timestamp, float voltage) {
         _latitude = latitude;
-        _longtitude = longtitude;
+        _longtitude = longitude;
         _altitude = altitude;
         _satelliteCount = satelliteCount;
         _timestamp = timestamp;
