@@ -23,6 +23,19 @@ public class DBTable {
     CodeLsType _codeLsType = new CodeLsType();
     CodeLsKind _codeLsKind = new CodeLsKind();
     CodeVaccine _codeVaccine = new CodeVaccine();
+
+    public String getNameLwdHistory() { return _lwdHistory._table_name; }
+    public String getNameLwdLsMatch() { return _lwdLsMatch._table_name; }
+    public String getNameLwdList() { return _lwdList._table_name; }
+    public String LwdNotSent() { return _lwdNotSent._table_name; }
+
+    public String getNameLsInfo() { return _lsInfo._table_name; }
+    public String getNameLsVaccination() { return _lsVaccination._table_name; }
+    public String getNameLsFamily() { return _lsFamily._table_name; }
+
+    public String getNameCodeLsType() { return _codeLsType._table_name; }
+    public String getNameCodeLsKind() { return _codeLsKind._table_name; }
+    public String getNameCodeVaccine() { return _codeVaccine._table_name; }
 }
 
 class LwdHistory {
@@ -105,7 +118,7 @@ class LsVaccination {
     String _ls_id = "ls_id";
     String _ls_code = "ls_code";
     String _ls_date = "ls_date";
-    String _primary_key = "PRIMARY KEY (lwd_id, lwd_time, ls_date)";
+    String _primary_key = "PRIMARY KEY (ls_id, ls_code, ls_date)";
 
     String _create_table =
             "CREATE TABLE IF NOT EXISTS " + _table_name + "(" +
