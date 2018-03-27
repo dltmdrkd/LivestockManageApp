@@ -5,13 +5,21 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.support.annotation.NonNull;
+import android.support.v4.util.ArrayMap;
 import android.util.Log;
 
 import com.cosoros.www.datastructure.LivestockInfo;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
+
 
 public class Database extends SQLiteOpenHelper {
 
@@ -110,34 +118,51 @@ public class Database extends SQLiteOpenHelper {
         Log.d("DATABASE", "DB INSERT DONE");
     }
 
-    public void read(String table) {
+    public ArrayList read(String table) {
         Log.d("DATABASE", "DB READ START");
 
         SQLiteDatabase db = this.getWritableDatabase();
-        String sql2 = "SELECT * FROM " + table + " ORDER BY data_time;";
+        String sql2
+                = "SELECT "
+                + _table._lwdHistory._lwd_id + ", "
+                + _table._lwdHistory._ls_id + ", "
+                + _table._lwdHistory._data_time + ", "
+                + _table._lwdHistory._data_latitude + ", "
+                + _table._lwdHistory._data_longitude + ", "
+                + _table._lwdHistory._data_altitude + ", "
+                + _table._lwdHistory._data_satellite_cnt + ", "
+                + _table._lwdHistory._data_battery + ", "
+                + _table._lwdHistory._data_origin
+                + " FROM " + table
+                + " ORDER BY lwd_id, data_time DESC;";
 
+        ArrayList readData = new ArrayList();
+        ArrayList columnName = _table.getColumnName(table);
         Cursor cursor = db.rawQuery(sql2, null);
         if (cursor.moveToFirst()) {
             do {
-                Log.d("DATABASE", "lwd_id : " + cursor.getString(0));
-                Log.d("DATABASE", "ls_id : " + cursor.getString(1));
-                Log.d("DATABASE", "data_origin : " + cursor.getString(2));
-                Log.d("DATABASE", "data_latitude: " + cursor.getString(3));
-                Log.d("DATABASE", "data_longitude : " + cursor.getString(4));
-                Log.d("DATABASE", "data_altitude : " + cursor.getString(5));
-                Log.d("DATABASE", "data_satellite_cnt : " + cursor.getString(6));
-                Log.d("DATABASE", "data_time : " + cursor.getString(7));
-                Log.d("DATABASE", "data_battery : " + cursor.getString(8));
+                ArrayList rowData = new ArrayList();
+
+                for(int i = 0; i < columnName.size(); i++) {
+                    Map tempData = new HashMap();
+                    tempData.put("colName", columnName.get(i));
+                    tempData.put("data", cursor.getString(i));
+
+                    rowData.add(tempData);
+                }
+
+                readData.add(rowData);
 
                 Log.d("DATABASE", "---------------------------------------");
 
             } while (cursor.moveToNext());
         }
-
         cursor.close();
+
+        readData.add(columnName);
         Log.d("DATABASE", "DB READ DONE");
         Log.d("DATABASE", "------------------------------------------------------------------------------EOF");
-
+        return readData;
     }
 }
 

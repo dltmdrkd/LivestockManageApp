@@ -1,5 +1,7 @@
 package com.cosoros.www.database;
 
+import java.util.ArrayList;
+
 /**
  * Created by Jan on 2018-03-19.
  *
@@ -36,6 +38,15 @@ public class DBTable {
     public String getNameCodeLsType() { return _codeLsType._table_name; }
     public String getNameCodeLsKind() { return _codeLsKind._table_name; }
     public String getNameCodeVaccine() { return _codeVaccine._table_name; }
+
+    public ArrayList getColumnName(String table) {
+        ArrayList temp = new ArrayList();
+        if (table.equals(_lwdHistory._table_name))
+            temp = _lwdHistory.getColumnName();
+
+        return temp;
+    }
+
 }
 
 class LwdHistory {
@@ -57,6 +68,23 @@ class LwdHistory {
                     _data_latitude + " REAL, " + _data_longitude + " REAL, " + _data_altitude + " REAL, " +
                     _data_satellite_cnt + " INTEGER, " + _data_time + " TEXT, " + _data_battery + " REAL, " +
                     _primary_key + ");";
+
+
+    ArrayList getColumnName() {
+        ArrayList columnName = new ArrayList();
+
+        columnName.add(_lwd_id);
+        columnName.add(_ls_id);
+        columnName.add(_data_latitude);
+        columnName.add(_data_longitude);
+        columnName.add(_data_altitude);
+        columnName.add(_data_satellite_cnt);
+        columnName.add(_data_time);
+        columnName.add(_data_battery);
+        columnName.add(_data_origin);
+
+        return columnName;
+    }
 }
 
 class LwdLsMatch {
