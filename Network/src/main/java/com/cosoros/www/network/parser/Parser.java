@@ -1,4 +1,4 @@
-package com.cosoros.www.network;
+package com.cosoros.www.network.parser;
 
 import com.cosoros.www.datastructure.LivestockInfo;
 
@@ -17,6 +17,8 @@ public class Parser {
     public Parser() {
     }
 
+    static final int posSrc = 5, countSrc = 4;
+    static final int posDst = 9, countDst = 4;
     static final int posLatitude = 15, countLatitude = 12;
     static final int posLongitude = 28, countLongitude = 12;
     static final int posAltitude = 41, countAltitude = 6;
@@ -34,6 +36,8 @@ public class Parser {
 
         if (data.length() == Integer.parseInt("4A", 16)) {
             // only process valid data length.
+            String source = split(data, posSrc, countSrc);
+            String destination = split(data, posDst, countDst);
             double latitude = Double.parseDouble(split(data, posLatitude, countLatitude));
             double longitude = Double.parseDouble(split(data, posLongitude, countLongitude));
             double altitude = Double.parseDouble(split(data, posAltitude, countAltitude));
@@ -50,7 +54,7 @@ public class Parser {
                 return info;
             }
             float voltage = Float.parseFloat(split(data, posVoltage, countVoltage));
-            info.setValues(latitude, longitude, altitude, satelliteCount, datetime, voltage);
+            info.setValues(source, destination, latitude, longitude, altitude, satelliteCount, datetime, voltage);
         }
         return info;
     }

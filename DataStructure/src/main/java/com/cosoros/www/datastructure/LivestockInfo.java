@@ -13,6 +13,8 @@ public class LivestockInfo {
 
     public LivestockInfo(LivestockInfo src) {
         _valid = src.isValid();
+        _source = src.source();
+        _destination = src.destination();
         _latitude = src.latitude();
         _longtitude = src.longitude();
         _altitude = src.altitude();
@@ -21,6 +23,8 @@ public class LivestockInfo {
         _voltage = src.voltage();
     }
 
+    private String  _source;
+    private String  _destination;
     private boolean _valid;
     private double  _latitude;
     private double  _longtitude;
@@ -33,31 +37,28 @@ public class LivestockInfo {
         return _valid;
     }
 
-    public double latitude() {
-        return _latitude;
-    }
-
+    public String source() { return _source; }
+    public String destination() { return _destination; }
+    public double latitude() { return _latitude; }
     public double longitude() {
         return _longtitude;
     }
-
     public double altitude() {
         return _altitude;
     }
-
     public int satelliteCount() {
         return _satelliteCount;
     }
-
     public Date timestamp() {
         return _timestamp;
     }
-
     public float voltage() {
         return _voltage;
     }
 
-    public void setValues(double latitude, double longitude, double altitude, int satelliteCount, Date timestamp, float voltage) {
+    public void setValues(String source, String destination, double latitude, double longitude, double altitude, int satelliteCount, Date timestamp, float voltage) {
+        _source = source;
+        _destination = destination;
         _latitude = latitude;
         _longtitude = longitude;
         _altitude = altitude;

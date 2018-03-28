@@ -1,2 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.cosoros.www.network" />
+    package="com.cosoros.www.network">
+
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+
+    <application>
+        <activity
+            android:name=".bluetooth.DeviceListActivity"
+            android:label="@string/title_activity_device_list"
+            android:parentActivityName=".bluetooth.BluetoothActivity"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+        <activity
+            android:name=".bluetooth.BluetoothActivity"
+            android:label="@string/title_activity_bluetooth"
+            android:theme="@style/Theme.AppCompat.NoActionBar"></activity>
+        <service android:name=".bluetooth.BluetoothService"></service>
+    </application>
+
+</manifest>

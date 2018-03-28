@@ -9,7 +9,7 @@ import android.widget.TableRow;
 import android.widget.TextView;
 
 import com.cosoros.www.datastructure.LivestockInfo;
-import com.cosoros.www.network.Parser;
+import com.cosoros.www.network.parser.Parser;
 
 import java.util.ArrayList;
 import java.util.Map;
