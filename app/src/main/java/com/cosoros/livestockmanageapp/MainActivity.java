@@ -1,5 +1,7 @@
 package com.cosoros.livestockmanageapp;
 
+import com.cosoros.www.database.Database;
+import com.cosoros.www.database.DatabaseActivity;
 import com.cosoros.www.datastructure.*;
 import com.cosoros.www.network.bluetooth.BluetoothActivity;
 import com.cosoros.www.network.bluetooth.BluetoothService;
@@ -49,6 +51,7 @@ import java.util.HashMap;
 
 import static android.util.Pair.create;
 
+
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
@@ -57,6 +60,7 @@ public class MainActivity extends AppCompatActivity
     private Pair<Double, Double> _myGpsLocation = new Pair<>(0.0, 0.0);
     private HashMap<String, LivestockInfo> _livestockInfoMap = new HashMap<>();
     private ParserThread _parserThread;
+    private Database _dataBase;
 
     private void startLocationService() {
         // 위치 관리자 객체 참조
@@ -198,6 +202,8 @@ public class MainActivity extends AppCompatActivity
                     LivestockInfo info = Parser.parse(data);
                     synchronized (_livestockInfoMap) {
                         _livestockInfoMap.put(info.source(), info);
+
+                        _dataBase.insert("lwd_history", data, info);
                     }
                 }
             }
@@ -447,6 +453,8 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        _dataBase = Database.getInstance(this);
+
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -524,7 +532,8 @@ public class MainActivity extends AppCompatActivity
             Intent i = new Intent(MainActivity.this, BluetoothActivity.class);
             startActivity(i);
         } else if (id == R.id.nav_database) {
-
+            Intent i = new Intent(MainActivity.this, DatabaseActivity.class);
+            startActivity(i);
         } else if (id == R.id.nav_manage) {
 
         } else if (id == R.id.nav_share) {

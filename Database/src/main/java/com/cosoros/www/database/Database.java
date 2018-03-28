@@ -24,7 +24,7 @@ import java.util.TimeZone;
 public class Database extends SQLiteOpenHelper {
 
     private static Database mInstance = null;
-    private static final int _DATABASE_VERSION = 4;
+    private static final int _DATABASE_VERSION = 1;
     private static final String _DB_NAME = "nomad_lwd.db";
     private static final DBTable _table = new DBTable();
     private SimpleDateFormat _dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
@@ -102,7 +102,7 @@ public class Database extends SQLiteOpenHelper {
 
         ContentValues values = new ContentValues();
 
-        values.put(_table._lwdHistory._lwd_id, "102F");
+        values.put(_table._lwdHistory._lwd_id, info.source());
         values.put(_table._lwdHistory._ls_id, "A0001M");
         values.put(_table._lwdHistory._data_origin, origin);
         values.put(_table._lwdHistory._data_latitude, info.latitude());
@@ -110,7 +110,8 @@ public class Database extends SQLiteOpenHelper {
         values.put(_table._lwdHistory._data_altitude, info.altitude());
 //        values.put(_table._lwdHistory._data_time, info.timestamp().toString());
         values.put(_table._lwdHistory._data_satellite_cnt, info.satelliteCount());
-        values.put(_table._lwdHistory._data_time, localDate);
+//        values.put(_table._lwdHistory._data_time, localDate);
+        values.put(_table._lwdHistory._data_time, _dateFormat.format(info.timestamp()));
         values.put(_table._lwdHistory._data_battery, info.voltage());
 
         db.insert(_table._lwdHistory._table_name, null, values);

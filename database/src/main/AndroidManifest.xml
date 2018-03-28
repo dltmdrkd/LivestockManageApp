@@ -5,6 +5,8 @@
     <application>
         <activity
             android:name=".DatabaseActivity"
+            android:label="Database"
+            android:theme="@style/Theme.AppCompat.NoActionBar"
             android:exported="true">
         </activity>
 
