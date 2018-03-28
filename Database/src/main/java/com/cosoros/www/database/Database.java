@@ -92,6 +92,11 @@ public class Database extends SQLiteOpenHelper {
     public void insert(String name, String origin, LivestockInfo info) {
         Log.d("DATABASE", "DB INSERT START");
 
+        if (!info.isValid()) {
+            Log.d("DATABASE", "DATA PARSING ERROR");
+            return;
+        }
+
         SQLiteDatabase db = this.getWritableDatabase();
 
         // get utc time from parser as Date type

@@ -57,10 +57,11 @@ public class MainActivity extends AppCompatActivity
 
     private int _state = BluetoothService.STATE_NONE;
     private String _receiveBuffer = "";
-    private Pair<Double, Double> _myGpsLocation = new Pair<>(0.0, 0.0);
+    private Pair<Double, Double> _myGpsLocation = new Pair<>(37.30362, 126.99712);
     private HashMap<String, LivestockInfo> _livestockInfoMap = new HashMap<>();
     private ParserThread _parserThread;
     private Database _dataBase;
+    private MapView _mapView;
 
     private void startLocationService() {
         // 위치 관리자 객체 참조
@@ -203,6 +204,8 @@ public class MainActivity extends AppCompatActivity
                     synchronized (_livestockInfoMap) {
                         _livestockInfoMap.put(info.source(), info);
 
+                        _mapView.invalidate();
+
                         _dataBase.insert("lwd_history", data, info);
                     }
                 }
@@ -255,6 +258,10 @@ public class MainActivity extends AppCompatActivity
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(Color.RED);
             paint.setTextSize(35);
+
+            canvas.drawCircle(_centerX + x / 2, _centerY + y / 2, 15, paint);
+
+            paint.setColor(Color.BLUE);
 
             for (String key : _livestockInfoMap.keySet()){
                 LivestockInfo info = _livestockInfoMap.get(key);
@@ -309,6 +316,7 @@ public class MainActivity extends AppCompatActivity
             paint.setStrokeWidth(5);
             canvas.drawRect(left, top, right, bottom, paint);
         }
+
         public boolean onTouchEvent(MotionEvent event) {
             final int action = event.getAction();
             switch (action & MotionEvent.ACTION_MASK) {
@@ -478,8 +486,8 @@ public class MainActivity extends AppCompatActivity
         navigationView.setNavigationItemSelectedListener(this);
 
         LinearLayout layout = findViewById(R.id.layout_view);
-        MapView view = new MapView(this);
-        layout.addView(view);
+        _mapView = new MapView(this);
+        layout.addView(_mapView);
 
         BluetoothService.getInstance().addHandler(_handler);
         _parserThread = new ParserThread();
