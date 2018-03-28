@@ -75,8 +75,8 @@ public class BluetoothService {
 
     public synchronized void start() {
         if (_connectThread != null) {
-            _connectedThread.cancel();
-            _connectedThread = null;
+            _connectThread.cancel();
+            _connectThread = null;
         }
 
         if (_connectedThread != null) {
