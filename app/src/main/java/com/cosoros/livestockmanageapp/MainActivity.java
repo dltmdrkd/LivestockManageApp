@@ -259,8 +259,17 @@ public class MainActivity extends AppCompatActivity
             for (String key : _livestockInfoMap.keySet()){
                 LivestockInfo info = _livestockInfoMap.get(key);
                 Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
+                float distance[] = new float[2];
+                Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), distance);
+                String name = "[" + info.source() + "]" + Float.toString((float)Math.round(distance[0]) / 1000) + "km";
+
                 float dx = (float)(x / 2) - (float)(point.first * _scale);
                 float dy = (float)(y / 2) + (float)(point.second * _scale);
+
+//                String angle = "[Angle]" + Integer.toString(Math.round(distance[1]));
+//                canvas.drawText(angle, _centerX + dx + 40, _centerY + dy + 40 , paint);
+
+                canvas.drawText(name, _centerX + dx + 40, _centerY + dy, paint);
                 canvas.drawCircle(_centerX + dx, _centerY + dy, 15, paint);
             }
 
