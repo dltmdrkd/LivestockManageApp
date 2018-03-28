@@ -192,7 +192,6 @@ public class BluetoothFragment extends Fragment {
                     // construct a string from the valid bytes in the buffer
                     String readMessage = new String(readBuf, 0, msg.arg1);
                     _receiveBuffer = _receiveBuffer + readMessage;
-                    //_conversationArrayAdapter.add(_connectedDeviceName + ":  " + readMessage);
                     break;
                 case Constants.MESSAGE_DEVICE_NAME:
                     // save the connected device's name
@@ -218,12 +217,14 @@ public class BluetoothFragment extends Fragment {
             _handler = handler;
         }
         public void run() {
-            String data = "";
-            int indexOfEnd = -1;
+            String data;
+            int indexOfEnd;
             while (_quitRequested != true) {
                 data = "";
                 synchronized (_receiveBuffer) {
-                    if (_receiveBuffer.isEmpty() != true && _receiveBuffer.startsWith("[") != true) {
+                    if (_receiveBuffer.isEmpty() != true &&
+                        _receiveBuffer.startsWith("[") != true &&
+                        _receiveBuffer.indexOf("[") != -1) {
                         _receiveBuffer = _receiveBuffer.substring(_receiveBuffer.indexOf("["));
                     }
                     indexOfEnd = _receiveBuffer.indexOf("]");

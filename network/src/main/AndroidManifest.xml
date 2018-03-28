@@ -8,14 +8,13 @@
     <application>
         <activity
             android:name=".bluetooth.DeviceListActivity"
-            android:label="@string/title_activity_device_list"
+            android:label="Select Bluetooth Device"
             android:parentActivityName=".bluetooth.BluetoothActivity"
-            android:theme="@style/Theme.AppCompat.NoActionBar" />
+            android:theme="@style/Theme.AppCompat.Dialog" />
         <activity
             android:name=".bluetooth.BluetoothActivity"
-            android:label="@string/title_activity_bluetooth"
+            android:label="Bluetooth Setting"
             android:theme="@style/Theme.AppCompat.NoActionBar"></activity>
-        <service android:name=".bluetooth.BluetoothService"></service>
     </application>
 
 </manifest>

@@ -13,7 +13,6 @@ import android.view.View;
 import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -40,7 +39,7 @@ public class DeviceListActivity extends AppCompatActivity {
         setResult(Activity.RESULT_CANCELED);
 
         ArrayAdapter<String> pairedDevicesArrayAdapter = new ArrayAdapter<>(this, R.layout.device_name);
-        _newDeviceArrayAdapter = new ArrayAdapter<String>(this, R.layout.device_name);
+        _newDeviceArrayAdapter = new ArrayAdapter<>(this, R.layout.device_name);
 
         // Find and set up the ListView for paired devices
         ListView pairedListView = findViewById(R.id.paired_devices);
