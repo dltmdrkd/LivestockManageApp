@@ -1,10 +1,12 @@
 package com.cosoros.www.database;
 
 import android.annotation.TargetApi;
+import android.support.v4.widget.TextViewCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.MenuItem;
 import android.widget.TableLayout;
 import android.widget.TableRow;
@@ -34,14 +36,14 @@ public class DatabaseActivity extends AppCompatActivity {
 //        LivestockInfo info = Parser.parse(data);
 //        Database dbTest = Database.getInstance(this);
         DBTable table = new DBTable();
-
+//
 //        dbTest.insert(table.getNameLwdHistory(), data, info);
         this.readDB(table.getNameLwdHistory());
 //        Log.d("DatabaseActivity", "------------------------------------------------------------------------------");
     }
 
 
-    @TargetApi(23)
+//    @TargetApi(23)
     private void readDB(String name) {
         Database dataBase = Database.getInstance(this);
         ArrayList readData = dataBase.read(name);
@@ -56,7 +58,10 @@ public class DatabaseActivity extends AppCompatActivity {
         for (int i = 0; i < columnName.size(); i++) {
             TextView textView = new TextView(this);
             textView.setBackgroundResource(R.drawable.border);
-            textView.setTextAppearance(R.style.HeaderText);
+            TextViewCompat.setTextAppearance(textView, R.style.HeaderText);
+            textView.setGravity(Gravity.CENTER);
+//            textView.setTextAppearance(R.style.HeaderText);
+
 
             textView.setText((String) columnName.get(i));
 
@@ -73,7 +78,9 @@ public class DatabaseActivity extends AppCompatActivity {
             for (int j = 0; j < col; j++) {
                 TextView textView = new TextView(this);
                 textView.setBackgroundResource(R.drawable.border);
-                textView.setTextAppearance(R.style.BodyText);
+                TextViewCompat.setTextAppearance(textView, R.style.BodyText);
+                textView.setGravity(Gravity.CENTER);
+//                textView.setTextAppearance(R.style.BodyText);
 
                 Map colData = (Map) rowData.get(j);
                 textView.setText((String) colData.get("data"));

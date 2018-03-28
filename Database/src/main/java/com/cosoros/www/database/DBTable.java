@@ -75,11 +75,11 @@ class LwdHistory {
 
         columnName.add(_lwd_id);
         columnName.add(_ls_id);
+        columnName.add(_data_time);
         columnName.add(_data_latitude);
         columnName.add(_data_longitude);
         columnName.add(_data_altitude);
         columnName.add(_data_satellite_cnt);
-        columnName.add(_data_time);
         columnName.add(_data_battery);
         columnName.add(_data_origin);
 

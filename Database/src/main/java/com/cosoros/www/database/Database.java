@@ -95,10 +95,10 @@ public class Database extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
 
         // get utc time from parser as Date type
-        Date utcTime = new Date(System.currentTimeMillis());
-        String localDate = _dateFormat.format(utcTime);
-        Log.d("DATABASE-TRY", "INSERT-utcTime : " + utcTime);
-        Log.d("DATABASE-TRY", "INSERT-localDate : " + localDate);
+//        Date utcTime = new Date(System.currentTimeMillis());
+//        String localDate = _dateFormat.format(utcTime);
+//        Log.d("DATABASE-TRY", "INSERT-utcTime : " + utcTime);
+//        Log.d("DATABASE-TRY", "INSERT-localDate : " + localDate);
 
         ContentValues values = new ContentValues();
 
@@ -108,7 +108,6 @@ public class Database extends SQLiteOpenHelper {
         values.put(_table._lwdHistory._data_latitude, info.latitude());
         values.put(_table._lwdHistory._data_longitude, info.longitude());
         values.put(_table._lwdHistory._data_altitude, info.altitude());
-//        values.put(_table._lwdHistory._data_time, info.timestamp().toString());
         values.put(_table._lwdHistory._data_satellite_cnt, info.satelliteCount());
 //        values.put(_table._lwdHistory._data_time, localDate);
         values.put(_table._lwdHistory._data_time, _dateFormat.format(info.timestamp()));
@@ -154,7 +153,7 @@ public class Database extends SQLiteOpenHelper {
 
                 readData.add(rowData);
 
-                Log.d("DATABASE", "---------------------------------------");
+                Log.d("DATABASE", "READ DATA");
 
             } while (cursor.moveToNext());
         }
