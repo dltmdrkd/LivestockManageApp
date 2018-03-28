@@ -33,6 +33,7 @@ public class BluetoothService {
     private AcceptThread _acceptThreadInsecure;
     private ConnectThread _connectThread;
     private ConnectedThread _connectedThread;
+    private ReconnectThread _reconnectThread;
     private int _state;
     private int _newState;
 
@@ -42,6 +43,7 @@ public class BluetoothService {
     public static final int STATE_CONNECTED = 3;
 
     private static BluetoothService instance = null;
+    private BluetoothDevice _device = null;
 
     public static synchronized BluetoothService getInstance() {
         if (instance == null) {
@@ -132,6 +134,11 @@ public class BluetoothService {
             _acceptThreadInsecure = null;
         }
 
+        if (_reconnectThread != null) {
+            _reconnectThread = null;
+        }
+        _device = device;
+
         _connectedThread = new ConnectedThread(socket, socketType);
         _connectedThread.start();
 
@@ -161,6 +168,9 @@ public class BluetoothService {
         if (_acceptThreadInsecure != null) {
             _acceptThreadInsecure.cancel();
             _acceptThreadInsecure = null;
+        }
+        if (_reconnectThread != null) {
+            _reconnectThread = null;
         }
         _state = STATE_NONE;
 
@@ -205,6 +215,11 @@ public class BluetoothService {
         updateTitle();
 
         BluetoothService.this.start();
+        if (_reconnectThread != null) {
+            _reconnectThread = null;
+        }
+        _reconnectThread = new ReconnectThread();
+        _reconnectThread.start();
     }
 
     private class AcceptThread extends Thread {
@@ -397,6 +412,20 @@ public class BluetoothService {
             try {
                 _socket.close();
             } catch (IOException e) {
+            }
+        }
+    }
+
+    private class ReconnectThread extends Thread {
+
+        public void run() {
+            while (_state != STATE_CONNECTED && _device != null) {
+                connect(_device, true);
+                try {
+                    sleep(15000);
+                } catch (InterruptedException e) {
+
+                }
             }
         }
     }
