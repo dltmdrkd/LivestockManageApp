@@ -1,20 +1,9 @@
 package com.cosoros.livestockmanageapp;
 
-import com.cosoros.www.database.Database;
-import com.cosoros.www.database.DatabaseActivity;
-import com.cosoros.www.datastructure.*;
-import com.cosoros.www.network.bluetooth.BluetoothActivity;
-import com.cosoros.www.network.bluetooth.BluetoothService;
-import com.cosoros.www.network.bluetooth.Constants;
-import com.cosoros.www.network.parser.Parser;
-
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.content.res.Resources;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -26,30 +15,32 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.util.Log;
-import android.util.Pair;
-import android.view.MotionEvent;
-import android.view.View;
-import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Pair;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.ViewGroup;
-import android.view.ViewManager;
+import android.view.MotionEvent;
+import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import com.cosoros.www.database.Database;
+import com.cosoros.www.database.DatabaseActivity;
+import com.cosoros.www.datastructure.LivestockInfo;
+import com.cosoros.www.network.bluetooth.BluetoothActivity;
+import com.cosoros.www.network.bluetooth.BluetoothService;
+import com.cosoros.www.network.bluetooth.Constants;
+import com.cosoros.www.network.parser.Parser;
 
-import static android.util.Pair.create;
+import java.util.HashMap;
 
 
 public class MainActivity extends AppCompatActivity
@@ -186,7 +177,9 @@ public class MainActivity extends AppCompatActivity
             while (_quitRequested != true) {
                 data = "";
                 synchronized (_receiveBuffer) {
-                    if (_receiveBuffer.isEmpty() != true && _receiveBuffer.startsWith("[") != true) {
+                    if (_receiveBuffer.isEmpty() != true &&
+                        _receiveBuffer.startsWith("[") != true &&
+                        _receiveBuffer.indexOf("[") != -1) {
                         _receiveBuffer = _receiveBuffer.substring(_receiveBuffer.indexOf("["));
                     }
                     indexOfEnd = _receiveBuffer.indexOf("]");
