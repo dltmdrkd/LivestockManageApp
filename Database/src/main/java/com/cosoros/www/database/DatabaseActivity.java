@@ -1,24 +1,34 @@
 package com.cosoros.www.database;
 
-import android.annotation.TargetApi;
+import android.os.Environment;
 import android.support.v4.widget.TextViewCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.cosoros.www.datastructure.LivestockInfo;
 import com.cosoros.www.network.parser.Parser;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Map;
 
 public class DatabaseActivity extends AppCompatActivity {
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,7 +51,6 @@ public class DatabaseActivity extends AppCompatActivity {
         this.readDB(table.getNameLwdHistory());
 //        Log.d("DatabaseActivity", "------------------------------------------------------------------------------");
     }
-
 
 //    @TargetApi(23)
     private void readDB(String name) {
@@ -94,6 +103,14 @@ public class DatabaseActivity extends AppCompatActivity {
         Log.d("DatabaseActivity", "Read End");
     }
 
+
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.file_export_menu, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
@@ -101,6 +118,49 @@ public class DatabaseActivity extends AppCompatActivity {
             finish();
             return true;
         }
+
+        if (id == R.id.file_export) {
+            Log.d("onOptionsItemSelected", "onClick");
+//            sqliteExport();
+        }
+
         return super.onOptionsItemSelected(item);
     }
+
+/*
+    // export to sd card
+    public void sqliteExport(){
+        Log.d("SQLITE EXPORT", "start");
+        Date todayDate = new Date();
+        SimpleDateFormat todayFormat = new SimpleDateFormat("yyyyMMddHHmmss");
+        String today = todayFormat.format(todayDate);
+        String fileName = today + "Log.sqlite";
+        try {
+            File sd = Environment.getExternalStorageDirectory();
+            File data = Environment.getDataDirectory();
+
+            if (sd.canWrite()) {
+                String currentDBPath = "/data/com.cosoros.livstockmanageapp/databases/nomad_lwd.db";
+                String backupDBPath = fileName;
+                File currentDB = new File(data, currentDBPath);
+                File backupDB = new File(sd, backupDBPath);
+
+                if (currentDB.exists()) {
+                    FileChannel src = new FileInputStream(currentDB).getChannel();
+                    FileChannel dst = new FileOutputStream(backupDB).getChannel();
+                    dst.transferFrom(src, 0, src.size());
+                    src.close();
+                    dst.close();
+                }
+                if(backupDB.exists()){
+                    Toast.makeText(this, "DB Export Complete!!", Toast.LENGTH_SHORT).show();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        Log.d("SQLITE EXPORT", "end");
+    }
+*/
+
 }

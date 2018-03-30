@@ -131,7 +131,12 @@ public class Database extends SQLiteOpenHelper {
                 = "SELECT "
                 + _table._lwdHistory._lwd_id + ", "
                 + _table._lwdHistory._ls_id + ", "
-                + _table._lwdHistory._data_time + ", "
+                + "substr(" + _table._lwdHistory._data_time + ", 1, 4)"
+                + " || '/' || substr(" + _table._lwdHistory._data_time + ", 5, 2)"
+                + " || '/' || substr(" + _table._lwdHistory._data_time + ", 7, 2)"
+                + " || ' ' || substr(" + _table._lwdHistory._data_time + ", 9, 2)"
+                + " || ':' || substr(" + _table._lwdHistory._data_time + ", 11, 2)"
+                + " || ':' || substr(" + _table._lwdHistory._data_time + ", 13, 2) as time, "
                 + _table._lwdHistory._data_latitude + ", "
                 + _table._lwdHistory._data_longitude + ", "
                 + _table._lwdHistory._data_altitude + ", "
@@ -139,7 +144,7 @@ public class Database extends SQLiteOpenHelper {
                 + _table._lwdHistory._data_battery + ", "
                 + _table._lwdHistory._data_origin
                 + " FROM " + table
-                + " ORDER BY lwd_id, data_time DESC;";
+                + " ORDER BY data_time DESC;";
 
         ArrayList readData = new ArrayList();
         ArrayList columnName = _table.getColumnName(table);

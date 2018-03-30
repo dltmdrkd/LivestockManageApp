@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.Rect;
 import android.location.Location;
 import android.location.LocationListener;
@@ -42,17 +43,23 @@ import com.cosoros.www.network.parser.Parser;
 
 import java.util.HashMap;
 
+enum DrawingType {
+    DRAW_DEFAULT, DRAW_DIRECTION;
+}
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
     private int _state = BluetoothService.STATE_NONE;
     private String _receiveBuffer = "";
+    private DrawingType _drawingMode = DrawingType.DRAW_DEFAULT;
     private Pair<Double, Double> _myGpsLocation = new Pair<>(37.30362, 126.99712);
+    private Pair<Double, Double> _myLastGpsLocation = new Pair<>(37.30362, 126.99712);
     private HashMap<String, LivestockInfo> _livestockInfoMap = new HashMap<>();
     private ParserThread _parserThread;
     private Database _dataBase;
     private MapView _mapView;
+
 
     private void startLocationService() {
         // 위치 관리자 객체 참조
@@ -77,7 +84,11 @@ public class MainActivity extends AppCompatActivity
                 Double longitude = lastLocation.getLongitude();
 
                 synchronized (_myGpsLocation) {
+                    _myLastGpsLocation = Pair.create(_myGpsLocation.first, _myGpsLocation.second);
                     _myGpsLocation = Pair.create(latitude, longitude);
+
+                    _drawingMode = DrawingType.DRAW_DIRECTION;
+                    _mapView.invalidate();
                 }
             }
         } catch(SecurityException ex) {
@@ -199,6 +210,7 @@ public class MainActivity extends AppCompatActivity
 
                         _mapView.invalidate();
 
+                        _drawingMode = DrawingType.DRAW_DEFAULT;
                         _dataBase.insert("lwd_history", data, info);
                     }
                 }
@@ -232,32 +244,56 @@ public class MainActivity extends AppCompatActivity
             super.onDraw(canvas);
             int x = getWidth();
             int y = getHeight();
+            int viewCenterX = _centerX + x / 2;
+            int viewCenterY = _centerY + y / 2;
             Paint paint = new Paint();
+
 
             // draw axis and circles.
             paint.setStyle(Paint.Style.STROKE);
             paint.setColor(Color.BLACK);
-            canvas.drawLine(0, _centerY + y / 2, x, _centerY + y / 2, paint);
-            canvas.drawLine(_centerX + x / 2, 0, _centerX + x / 2, y, paint);
+            canvas.drawLine(0, viewCenterY, x, viewCenterY, paint);
+            canvas.drawLine(viewCenterX, 0, viewCenterX, y, paint);
             for (int i = 0; i < 5; ++i) {
-                canvas.drawCircle(_centerX + x / 2, _centerY + y / 2, (i + 1) * _scale * 2.5f, paint);
+                canvas.drawCircle(viewCenterX, viewCenterY, (i + 1) * _scale * 2.5f, paint);
             }
-            Rect dst = new Rect((int)(_centerX + x / 2 + 5 * 2.5f * _scale - 50),
-                    (int)(_centerY + y / 2 - 50),
-                    (int)(_centerX + x / 2 + 5 * 2.5f * _scale + 50),
-                    (int)(_centerY + y / 2 + 50));
+            Rect dst = new Rect((int)(viewCenterX + 5 * 2.5f * _scale - 50),
+                    (int)(viewCenterY - 50),
+                    (int)(viewCenterX + 5 * 2.5f * _scale + 50),
+                    (int)(viewCenterY + 50));
             //canvas.drawBitmap(sun_image, null, dst, null);
 
+            // draw my location on center
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(Color.RED);
             paint.setTextSize(35);
+            canvas.drawCircle(viewCenterX, viewCenterY, 15, paint);
 
-            canvas.drawCircle(_centerX + x / 2, _centerY + y / 2, 15, paint);
+            if (_drawingMode == DrawingType.DRAW_DIRECTION) {
+                // draw my direction
+                float direction[] = new float[2];
+                Location.distanceBetween(_myLastGpsLocation.first, _myLastGpsLocation.second, _myGpsLocation.first, _myGpsLocation.second, direction);
 
-            paint.setColor(Color.BLUE);
+                // draw triangle
+                Path path = new Path();
+                int triLength = 20;
 
+                path.moveTo(viewCenterX - (triLength / 2), viewCenterY + 17);
+                path.lineTo(viewCenterX + (triLength / 2), viewCenterY + 17);
+                path.lineTo(viewCenterX, viewCenterY + 17 + 17);
+                path.close();
+
+                canvas.save();
+                canvas.rotate(-direction[1], viewCenterX, viewCenterY);
+                canvas.drawPath(path, paint);
+                canvas.restore();
+                _drawingMode = DrawingType.DRAW_DEFAULT;
+            }
+
+            int cnt = 0;
             for (String key : _livestockInfoMap.keySet()){
                 LivestockInfo info = _livestockInfoMap.get(key);
+
                 Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
                 float distance[] = new float[2];
                 Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), distance);
@@ -268,6 +304,19 @@ public class MainActivity extends AppCompatActivity
 
 //                String angle = "[Angle]" + Integer.toString(Math.round(distance[1]));
 //                canvas.drawText(angle, _centerX + dx + 40, _centerY + dy + 40 , paint);
+
+                cnt = (cnt + 1) % 3;
+                switch (cnt) {
+                    case 0:
+                        paint.setColor(Color.BLUE);
+                        break;
+                    case 1:
+                        paint.setColor(Color.GREEN);
+                        break;
+                    case 2:
+                        paint.setColor(Color.BLACK);
+                        break;
+                }
 
                 canvas.drawText(name, _centerX + dx + 40, _centerY + dy, paint);
                 canvas.drawCircle(_centerX + dx, _centerY + dy, 15, paint);
@@ -362,6 +411,8 @@ public class MainActivity extends AppCompatActivity
                     break;
                 }
             }
+
+            _drawingMode = DrawingType.DRAW_DEFAULT;
             invalidate();
             return true;
             //return super.onTouchEvent(event);
