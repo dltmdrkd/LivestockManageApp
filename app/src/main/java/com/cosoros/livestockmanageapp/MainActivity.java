@@ -41,10 +41,16 @@ import com.cosoros.www.network.bluetooth.BluetoothService;
 import com.cosoros.www.network.bluetooth.Constants;
 import com.cosoros.www.network.parser.Parser;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 
 enum DrawingType {
     DRAW_DEFAULT, DRAW_DIRECTION;
+}
+enum RunType {
+    APP_START, APP_SLEEP
 }
 
 public class MainActivity extends AppCompatActivity
@@ -53,6 +59,7 @@ public class MainActivity extends AppCompatActivity
     private int _state = BluetoothService.STATE_NONE;
     private String _receiveBuffer = "";
     private DrawingType _drawingMode = DrawingType.DRAW_DEFAULT;
+    private RunType _runMode = RunType.APP_START;
     private Pair<Double, Double> _myGpsLocation = new Pair<>(37.30362, 126.99712);
     private Pair<Double, Double> _myLastGpsLocation = new Pair<>(37.30362, 126.99712);
     private HashMap<String, LivestockInfo> _livestockInfoMap = new HashMap<>();
@@ -84,11 +91,7 @@ public class MainActivity extends AppCompatActivity
                 Double longitude = lastLocation.getLongitude();
 
                 synchronized (_myGpsLocation) {
-                    _myLastGpsLocation = Pair.create(_myGpsLocation.first, _myGpsLocation.second);
                     _myGpsLocation = Pair.create(latitude, longitude);
-
-                    _drawingMode = DrawingType.DRAW_DIRECTION;
-                    _mapView.invalidate();
                 }
             }
         } catch(SecurityException ex) {
@@ -127,7 +130,11 @@ public class MainActivity extends AppCompatActivity
 
         public void onLocationChanged(Location location) {
             synchronized (_myGpsLocation) {
+                _myLastGpsLocation = _myGpsLocation;
                 _myGpsLocation = Pair.create(location.getLatitude(), location.getLongitude());
+
+                _drawingMode = DrawingType.DRAW_DIRECTION;
+                _mapView.invalidate();
             }
         }
 
@@ -207,7 +214,6 @@ public class MainActivity extends AppCompatActivity
                     LivestockInfo info = Parser.parse(data);
                     synchronized (_livestockInfoMap) {
                         _livestockInfoMap.put(info.source(), info);
-
                         _mapView.invalidate();
 
                         _drawingMode = DrawingType.DRAW_DEFAULT;
@@ -248,7 +254,6 @@ public class MainActivity extends AppCompatActivity
             int viewCenterY = _centerY + y / 2;
             Paint paint = new Paint();
 
-
             // draw axis and circles.
             paint.setStyle(Paint.Style.STROKE);
             paint.setColor(Color.BLACK);
@@ -270,7 +275,7 @@ public class MainActivity extends AppCompatActivity
             canvas.drawCircle(viewCenterX, viewCenterY, 15, paint);
 
             if (_drawingMode == DrawingType.DRAW_DIRECTION) {
-                // draw my direction
+//                 draw my direction
                 float direction[] = new float[2];
                 Location.distanceBetween(_myLastGpsLocation.first, _myLastGpsLocation.second, _myGpsLocation.first, _myGpsLocation.second, direction);
 
@@ -290,6 +295,25 @@ public class MainActivity extends AppCompatActivity
                 _drawingMode = DrawingType.DRAW_DEFAULT;
             }
 
+
+//            if (_runMode == RunType.APP_START) {
+//                ArrayList baseData = _dataBase.readLast("lwd_history");
+//                for (int i = 0; i < baseData.size(); i++) {
+//                    Map rowData = (Map)baseData.get(i);
+//
+//
+//                    String lwdId = (String)rowData.get("data");
+//                    Date timestamp = (Date)rowData.get("data");
+//                    Double lat = (Double)rowData.get(2), lon = (Double)rowData.get(3), al = (Double)rowData.get(4);
+//
+//                    LivestockInfo info = new LivestockInfo();
+//                    info.setValues(lwdId, "", lat, lon, al, 0, timestamp, 0);
+//                    _livestockInfoMap.put(lwdId, info);
+//
+//                    _runMode = RunType.APP_SLEEP;
+//                }
+//            }
+
             int cnt = 0;
             for (String key : _livestockInfoMap.keySet()){
                 LivestockInfo info = _livestockInfoMap.get(key);
@@ -305,16 +329,25 @@ public class MainActivity extends AppCompatActivity
 //                String angle = "[Angle]" + Integer.toString(Math.round(distance[1]));
 //                canvas.drawText(angle, _centerX + dx + 40, _centerY + dy + 40 , paint);
 
-                cnt = (cnt + 1) % 3;
+                cnt = (cnt + 1) % 4;
                 switch (cnt) {
                     case 0:
                         paint.setColor(Color.BLUE);
+                        canvas.drawText("Last time: [" + info.source() + "]" + info.timestamp(), _centerX + 40, _centerY + 40, paint);
                         break;
                     case 1:
-                        paint.setColor(Color.GREEN);
+                        paint.setColor(Color.MAGENTA);
+                        canvas.drawText("Last time: [" + info.source() + "]" + info.timestamp(), _centerX + 40, _centerY + 80, paint);
                         break;
                     case 2:
                         paint.setColor(Color.BLACK);
+                        canvas.drawText("Last time: [" + info.source() + "]" + info.timestamp(), _centerX + 40, _centerY + 120, paint);
+                        break;
+                    case 3:
+                        paint.setColor(Color.GRAY);
+                        canvas.drawText("Last time: [" + info.source() + "]" + info.timestamp(), _centerX + 40, _centerY + 160, paint);
+                        break;
+                    default:
                         break;
                 }
 
