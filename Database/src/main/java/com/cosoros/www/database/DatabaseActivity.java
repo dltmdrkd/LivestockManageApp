@@ -79,6 +79,9 @@ public class DatabaseActivity extends AppCompatActivity {
         tableLayout.addView(columnRow);
 
         // add data columns
+        if (row >  101) {
+            row = 101;
+        }
         for (int i = 0; i < row - 1; i++) {
             TableRow tableRow = new TableRow(this);
 

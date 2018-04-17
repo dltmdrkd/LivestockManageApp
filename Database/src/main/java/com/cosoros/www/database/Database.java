@@ -24,7 +24,7 @@ import java.util.TimeZone;
 public class Database extends SQLiteOpenHelper {
 
     private static Database mInstance = null;
-    private static final int _DATABASE_VERSION = 1;
+    private static final int _DATABASE_VERSION = 2;
     private static final String _DB_NAME = "nomad_lwd.db";
     private static final DBTable _table = new DBTable();
     private SimpleDateFormat _dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
@@ -122,6 +122,62 @@ public class Database extends SQLiteOpenHelper {
 
         Log.d("DATABASE", "DB INSERT DONE");
     }
+//
+//    public ArrayList readLast(String table) {
+//        Log.d("DATABASE", "DB READ START");
+//
+//        SQLiteDatabase db = this.getWritableDatabase();
+////        select lwd_id, data_latitude, data_longitude, data_altitude, data_time
+////        from lwd_history
+////        group by lwd_id;
+//        String sql2
+//                = "SELECT "
+//                + _table._lwdHistory._lwd_id + ", "
+//                + "substr(" + _table._lwdHistory._data_time + ", 1, 4)"
+//                + " || '/' || substr(" + _table._lwdHistory._data_time + ", 5, 2)"
+//                + " || '/' || substr(" + _table._lwdHistory._data_time + ", 7, 2)"
+//                + " || ' ' || substr(" + _table._lwdHistory._data_time + ", 9, 2)"
+//                + " || ':' || substr(" + _table._lwdHistory._data_time + ", 11, 2)"
+//                + " || ':' || substr(" + _table._lwdHistory._data_time + ", 13, 2) as time, "
+//                + _table._lwdHistory._data_latitude + ", "
+//                + _table._lwdHistory._data_longitude + ", "
+//                + _table._lwdHistory._data_altitude
+//                + " FROM " + table
+//                + " GROUP BY " + _table._lwdHistory._lwd_id
+//                + " ORDER BY " + _table._lwdHistory._lwd_id;
+//
+//        ArrayList readData = new ArrayList();
+//        ArrayList columnName = new ArrayList();
+//        columnName.add("lwd_id");
+//        columnName.add("data_time");
+//        columnName.add("data_latitude");
+//        columnName.add("data_longitude");
+//        columnName.add("data_altitude");
+//        Cursor cursor = db.rawQuery(sql2, null);
+//        if (cursor.moveToFirst()) {
+//            do {
+//                ArrayList rowData = new ArrayList();
+//
+//                for(int i = 0; i < 5; i++) {
+//                    Map tempData = new HashMap();
+//                    tempData.put("colName", columnName.get(i));
+//                    tempData.put("data", cursor.getString(i));
+//
+//                    rowData.add(tempData);
+//                }
+//
+//                readData.add(rowData);
+//
+//                Log.d("DATABASE", "READ-LAST DATA");
+//
+//            } while (cursor.moveToNext());
+//        }
+//
+//        cursor.close();
+//        Log.d("DATABASE", "DB READ-LAST DONE");
+//        Log.d("DATABASE", "------------------------------------------------------------------------------EOF");
+//        return readData;
+//    }
 
     public ArrayList read(String table) {
         Log.d("DATABASE", "DB READ START");

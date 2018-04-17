@@ -60,7 +60,7 @@ class LwdHistory {
     String _data_satellite_cnt = "data_satellite_cnt";
     String _data_time = "data_time";
     String _data_battery = "data_battery";
-    String _primary_key = "PRIMARY KEY (ls_id, data_time)";
+    String _primary_key = "PRIMARY KEY (lwd_id, data_time)";
 
     String _create_table =
             "CREATE TABLE IF NOT EXISTS " + _table_name + "(" +
