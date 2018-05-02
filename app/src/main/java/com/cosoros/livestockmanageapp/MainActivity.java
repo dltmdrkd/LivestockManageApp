@@ -217,7 +217,7 @@ public class MainActivity extends AppCompatActivity
                         _mapView.invalidate();
 
                         _drawingMode = DrawingType.DRAW_DEFAULT;
-                        _dataBase.insert("lwd_history", data, info);
+                        _dataBase.insert("lwd_history", data, info, _myGpsLocation);
                     }
                 }
             }

@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.support.annotation.NonNull;
 import android.support.v4.util.ArrayMap;
 import android.util.Log;
+import android.util.Pair;
 
 import com.cosoros.www.datastructure.LivestockInfo;
 
@@ -24,7 +25,7 @@ import java.util.TimeZone;
 public class Database extends SQLiteOpenHelper {
 
     private static Database mInstance = null;
-    private static final int _DATABASE_VERSION = 2;
+    private static final int _DATABASE_VERSION = 1;
     private static final String _DB_NAME = "nomad_lwd.db";
     private static final DBTable _table = new DBTable();
     private SimpleDateFormat _dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
@@ -89,7 +90,7 @@ public class Database extends SQLiteOpenHelper {
         Log.d("DATABASE", "DB UPDATE DONE");
     }
 
-    public void insert(String name, String origin, LivestockInfo info) {
+    public void insert(String name, String origin, LivestockInfo info, Pair<Double, Double> userLocation) {
         Log.d("DATABASE", "DB INSERT START");
 
         if (!info.isValid()) {
@@ -115,6 +116,13 @@ public class Database extends SQLiteOpenHelper {
         values.put(_table._lwdHistory._data_altitude, info.altitude());
         values.put(_table._lwdHistory._data_satellite_cnt, info.satelliteCount());
 //        values.put(_table._lwdHistory._data_time, localDate);
+//        values.put(_table._lwdHistory._data_repeat, info.dataRepeat());
+        values.put(_table._lwdHistory._user_latitude, userLocation.first);
+        values.put(_table._lwdHistory._user_longitude, userLocation.second);
+
+//        if (info.repeat() != "") {
+//            values.put(_table._lwdHistory._data_repeat, info.repeat());
+
         values.put(_table._lwdHistory._data_time, _dateFormat.format(info.timestamp()));
         values.put(_table._lwdHistory._data_battery, info.voltage());
 
@@ -122,7 +130,7 @@ public class Database extends SQLiteOpenHelper {
 
         Log.d("DATABASE", "DB INSERT DONE");
     }
-//
+
 //    public ArrayList readLast(String table) {
 //        Log.d("DATABASE", "DB READ START");
 //
@@ -185,6 +193,11 @@ public class Database extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
         String sql2
                 = "SELECT "
+                + _table._lwdHistory._utc_time + ", "
+                + "(case " +  _table._lwdHistory._data_repeat
+                + "    when 'FFFF' then '-' "
+                + "    else " + _table._lwdHistory._data_repeat
+                + " end) data_repeat, "
                 + _table._lwdHistory._lwd_id + ", "
                 + _table._lwdHistory._ls_id + ", "
                 + "substr(" + _table._lwdHistory._data_time + ", 1, 4)"
@@ -200,7 +213,7 @@ public class Database extends SQLiteOpenHelper {
                 + _table._lwdHistory._data_battery + ", "
                 + _table._lwdHistory._data_origin
                 + " FROM " + table
-                + " ORDER BY data_time DESC;";
+                + " ORDER BY utc_time DESC;";
 
         ArrayList readData = new ArrayList();
         ArrayList columnName = _table.getColumnName(table);

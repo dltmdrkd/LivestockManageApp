@@ -60,19 +60,27 @@ class LwdHistory {
     String _data_satellite_cnt = "data_satellite_cnt";
     String _data_time = "data_time";
     String _data_battery = "data_battery";
-    String _primary_key = "PRIMARY KEY (lwd_id, data_time)";
+    String _data_repeat = "data_repeat";
+    String _user_latitude = "user_latitude";
+    String _user_longitude = "user_longitude";
+    String _utc_time = "utc_time";
+    String _primary_key = "PRIMARY KEY (lwd_id, data_repeat, utc_time)";
 
     String _create_table =
             "CREATE TABLE IF NOT EXISTS " + _table_name + "(" +
                     _lwd_id + " TEXT NOT NULL, " + _ls_id + " TEXT, " + _data_origin + " TEXT, " +
                     _data_latitude + " REAL, " + _data_longitude + " REAL, " + _data_altitude + " REAL, " +
                     _data_satellite_cnt + " INTEGER, " + _data_time + " TEXT, " + _data_battery + " REAL, " +
+                    _data_repeat + " TEXT DEFAULT 'FFFF', " + _user_latitude + " REAL, " + _user_longitude + " REAL, " +
+                    _utc_time + " TEXT DEFAULT CURRENT_TIMESTAMP," +
                     _primary_key + ");";
 
 
     ArrayList getColumnName() {
         ArrayList columnName = new ArrayList();
 
+        columnName.add(_utc_time);
+        columnName.add(_data_repeat);
         columnName.add(_lwd_id);
         columnName.add(_ls_id);
         columnName.add(_data_time);
