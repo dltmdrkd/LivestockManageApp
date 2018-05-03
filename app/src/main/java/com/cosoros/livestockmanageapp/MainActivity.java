@@ -41,6 +41,10 @@ import com.cosoros.www.network.bluetooth.BluetoothService;
 import com.cosoros.www.network.bluetooth.Constants;
 import com.cosoros.www.network.parser.Parser;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -296,23 +300,32 @@ public class MainActivity extends AppCompatActivity
             }
 
 
-//            if (_runMode == RunType.APP_START) {
-//                ArrayList baseData = _dataBase.readLast("lwd_history");
-//                for (int i = 0; i < baseData.size(); i++) {
-//                    Map rowData = (Map)baseData.get(i);
-//
-//
-//                    String lwdId = (String)rowData.get("data");
-//                    Date timestamp = (Date)rowData.get("data");
-//                    Double lat = (Double)rowData.get(2), lon = (Double)rowData.get(3), al = (Double)rowData.get(4);
-//
-//                    LivestockInfo info = new LivestockInfo();
-//                    info.setValues(lwdId, "", lat, lon, al, 0, timestamp, 0);
-//                    _livestockInfoMap.put(lwdId, info);
-//
-//                    _runMode = RunType.APP_SLEEP;
-//                }
-//            }
+            if (_runMode == RunType.APP_START) {
+                JSONObject lastData;
+                JSONArray key;
+                JSONObject data;
+
+                try {
+                    lastData = _dataBase.readLast();
+                    key = lastData.getJSONArray("key");
+                    data = lastData.getJSONObject("data");
+
+                    for (int i = 0; i < key.length(); i++) {
+                        Double lat, lon, alt;
+                        String lwd_id, utcTime;
+                        JSONObject dataDetail;
+
+                        dataDetail = data.getJSONObject(key.getString(i));
+                        lwd_id = key.getString(i);
+                        _livestockInfoMap.put(lwd_id, Parser.parse(lwd_id, dataDetail));
+
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+                _runMode = RunType.APP_SLEEP;
+            }
 
             int cnt = 0;
             for (String key : _livestockInfoMap.keySet()){

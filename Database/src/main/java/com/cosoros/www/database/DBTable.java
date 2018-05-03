@@ -71,7 +71,7 @@ class LwdHistory {
                     _lwd_id + " TEXT NOT NULL, " + _ls_id + " TEXT, " + _data_origin + " TEXT, " +
                     _data_latitude + " REAL, " + _data_longitude + " REAL, " + _data_altitude + " REAL, " +
                     _data_satellite_cnt + " INTEGER, " + _data_time + " TEXT, " + _data_battery + " REAL, " +
-                    _data_repeat + " TEXT DEFAULT 'FFFF', " + _user_latitude + " REAL, " + _user_longitude + " REAL, " +
+                    _data_repeat + " TEXT DEFAULT '0000', " + _user_latitude + " REAL, " + _user_longitude + " REAL, " +
                     _utc_time + " TEXT DEFAULT CURRENT_TIMESTAMP," +
                     _primary_key + ");";
 

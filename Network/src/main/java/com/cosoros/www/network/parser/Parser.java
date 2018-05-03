@@ -4,6 +4,9 @@ import android.util.Log;
 
 import com.cosoros.www.datastructure.LivestockInfo;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -30,7 +33,7 @@ public class Parser {
     static final int posCmd = posDst + countDst, countCmd = 2;  // 13
     static final int posLatitude = posCmd + countCmd, countLatitude = 10;   // 15
     static final int posLongitude = countDelimiter + posLatitude + countLatitude, countLongitude = 11;   // 26
-    static final int posAltitude = countDelimiter + posLongitude + countLongitude, countAltitude = 7;  // 38
+    static final int posAltitude = countDelimiter + posLongitude + countLongitude, countAltitude = 6;  // 38
     static final int posSatelliteCount = countDelimiter + posAltitude + countAltitude, countSatelliteCount = 2;  // 45
     static final int posDate = countDelimiter + posSatelliteCount + countSatelliteCount, countDate = 8;  // 48
     static final int posTime = countDelimiter + posDate + countDate, countTime = 6;   // 57
@@ -73,4 +76,29 @@ public class Parser {
         }
         return info;
     }
+
+    public static LivestockInfo parse(String source, JSONObject dataDetail) throws JSONException {
+        LivestockInfo info = new LivestockInfo();
+        Double latitude, longitude, altitude;
+        String utcTime;
+
+        latitude = dataDetail.getDouble("lat");
+        longitude = dataDetail.getDouble("lon");
+        altitude = dataDetail.getDouble("alt");
+        utcTime = dataDetail.getString("time");
+
+        SimpleDateFormat formatFromString = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date datetime;
+        try {
+            datetime = formatFromString.parse(utcTime);
+        }
+        catch(ParseException e) {
+            e.printStackTrace();
+            return info;
+        }
+
+        info.setValues(source, "", latitude, longitude, altitude, 0, datetime, 0.0f);
+        return info;
+    }
+
 }
