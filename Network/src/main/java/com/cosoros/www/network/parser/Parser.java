@@ -1,8 +1,7 @@
 package com.cosoros.www.network.parser;
 
-import android.util.Log;
-
 import com.cosoros.www.datastructure.LivestockInfo;
+import com.cosoros.www.datastructure.Version;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -10,70 +9,116 @@ import org.json.JSONObject;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.StringTokenizer;
 
-/**
+/*
  * Created by dltmd on 3/16/2018.
  * Parser received packet from Receiver through Bluetooth module.
- * Format : [(1) LENGTH(4) SRC_ID(4) DST_ID(4) CMD(2) LATITUDE(10) ^(1) LONGITUDE(11) ^(1) ALTITUDE(6) ^(1) CNT_SAT(2) ^(1) DATE(8) ^(1) TIME(6) ^(1) VOLTAGE(5) ^(1) ](1)
- *           0 1234 5678 9012 34 5678901234 5 67890123456 7 890123 4 56 7 89012345 6 789012 3 45678 9 0
- * Example : [ 0048 0002 007f A0 -36.008055 ^ -009.039787 ^ 027.00 ^ 03 ^ 20180316 ^ 151233 ^ 03.50 ^ ]
- *           [ 0042 0305 030F A0 048.105038 ^ 0106.751366 ^ 1307.00 ^ 09^20180402^084201^07.20^]
+ * Format : [(1) LENGTH(4) SRC_ID(4) RPT_ID(4) DST_ID(4) CMD(2) LATITUDE(V) ^(1) LONGITUDE(V) ^(1) ALTITUDE(V) ^(1) CNT_SAT(V) ^(1) DATE(8) ^(1) TIME(6) ^(1) VOLTAGE(V) ^(1) HARDWARE_VER(V) ^(1) SOFTWARE_VER(V) ^(1) ](1)
  */
-//[00420305030FA0048.105038^0106.751366^1307.00^09^20180402^084201^07.20^]
+
 public class Parser {
     public Parser() {
     }
 
-    static final int countDelimiter = 1;
+    static final String _startChar = "[";
+    static final String _endChar = "]";
+    static final String _delimiter = "^";
+    static final String _verDelimiter = ".";
 
-    static final int posStart = 0, countStart = 1;
-    static final int posDataSize = posStart + countStart, countDatasize = 4;    // 1
-    static final int posSrc = posDataSize + countDatasize, countSrc = 4;    // 5
-    static final int posDst = posSrc + countSrc, countDst = 4;  // 9
-    static final int posCmd = posDst + countDst, countCmd = 2;  // 13
-    static final int posLatitude = posCmd + countCmd, countLatitude = 10;   // 15
-    static final int posLongitude = countDelimiter + posLatitude + countLatitude, countLongitude = 11;   // 26
-    static final int posAltitude = countDelimiter + posLongitude + countLongitude, countAltitude = 6;  // 38
-    static final int posSatelliteCount = countDelimiter + posAltitude + countAltitude, countSatelliteCount = 2;  // 45
-    static final int posDate = countDelimiter + posSatelliteCount + countSatelliteCount, countDate = 8;  // 48
-    static final int posTime = countDelimiter + posDate + countDate, countTime = 6;   // 57
-    static final int posVoltage = countDelimiter + posTime + countTime, countVoltage = 5;    // 64
-    static final int posEnd = countDelimiter + posVoltage + countVoltage, countEnd = 1; // 70
+    static final int _countDatasize = 4;
+    static final int _countSrc = 4, _countRpt = 4, _countDst = 4;
+    static final int _countCmd = 2;
+    static final int _headerSize = _countDatasize + _countSrc + _countRpt + _countDst + _countCmd;
 
+    enum DATAINDEX {
+        LAT,     // latitude.
+        LON,     // longitude.
+        ALT,     // altitude.
+        CNTSAT, // count of satellite.
+        DATE,   // date.
+        TIME,   // time.
+        VOL,    // voltage.
+        HWVER,  // hardware version.
+        FWVER,  // firmware version.
+        INDEXCOUNT,
+    }
 
     protected static String split(String data, int pos, int length) {
         return data.substring(pos, pos + length);
     }
 
+    protected static String getString(String[] tokens, DATAINDEX index) {
+        return tokens[index.ordinal()];
+    }
+
     public static LivestockInfo parse(String packet) {
         LivestockInfo info = new LivestockInfo();
-        int test = packet.length();
 
-        if (packet.length() == posEnd + countEnd) {
-            // only process valid packet length.
-            String source = split(packet, posSrc, countSrc);
-            String destination = split(packet, posDst, countDst);
-            double latitude = Double.parseDouble(split(packet, posLatitude, countLatitude));
-            double longitude = Double.parseDouble(split(packet, posLongitude, countLongitude));
-            double altitude = Double.parseDouble(split(packet, posAltitude, countAltitude));
-            int satelliteCount = Integer.parseInt(split(packet, posSatelliteCount, countSatelliteCount));
-            String datetimeStr = split(packet, posDate, countDate);
-            datetimeStr = datetimeStr + split(packet, posTime, countTime);
-            SimpleDateFormat formatFromString = new SimpleDateFormat("yyyyMMddHHmmss");
-            Date datetime;
-            try {
-                datetime = formatFromString.parse(datetimeStr);
-            }
-            catch(ParseException e) {
-                e.printStackTrace();
-                return info;
-            }
-            float voltage = Float.parseFloat(split(packet, posVoltage, countVoltage));
-            info.setValues(source, destination, latitude, longitude, altitude, satelliteCount, datetime, voltage);
-        } else {
-            Log.d("PARSING-ERROR", "Length: " + test);
-            Log.d("PARSING-ERROR", "Pakcet: " + packet);
+        if (packet.startsWith(_startChar) == true && packet.endsWith(_endChar) == true) {
+            packet = packet.substring(1, packet.length() - 1); // remove "[" and "]".
         }
+        else {
+            // invalid packet.
+            return info;
+        }
+
+        String header = packet.substring(0, _headerSize);
+        String data = packet.substring(_headerSize, packet.length());
+
+        // parse header info.
+        String source = header.substring(4, 8);
+        String repeater = header.substring(8, 12);
+        String destination = header.substring(12, 16);
+        String command = header.substring(16, 18);
+
+        StringTokenizer tokenizer = new StringTokenizer(data, _delimiter);
+
+        if (tokenizer.hasMoreTokens() != true) return info;
+        int tokenCount = tokenizer.countTokens();
+        if (tokenCount <= 0) return info;
+
+        String [] tokens = new String[tokenCount];
+
+        for (int i = 0; i < tokenCount; ++i) {
+            tokens[i] = tokenizer.nextToken();
+        }
+
+        if (tokenCount < DATAINDEX.INDEXCOUNT.ordinal()) return info;
+
+        double latitude = Double.parseDouble(getString(tokens, DATAINDEX.LAT));
+        double longitude = Double.parseDouble(getString(tokens, DATAINDEX.LON));
+        double altitude = Double.parseDouble(getString(tokens, DATAINDEX.ALT));
+        int satelliteCount = Integer.parseInt(getString(tokens, DATAINDEX.CNTSAT));
+        String datetimeStr = getString(tokens, DATAINDEX.DATE) + getString(tokens, DATAINDEX.TIME);
+        SimpleDateFormat formatFromString = new SimpleDateFormat("yyyyMMddHHmmss");
+        Date datetime;
+        try {
+            datetime = formatFromString.parse(datetimeStr);
+        }
+        catch(ParseException e) {
+            e.printStackTrace();
+            return info;
+        }
+        float voltage = Float.parseFloat(getString(tokens, DATAINDEX.VOL));
+
+        String hwVersionStr = getString(tokens, DATAINDEX.HWVER);
+        StringTokenizer hwverTokenizer = new StringTokenizer(hwVersionStr, _verDelimiter);
+        if (hwverTokenizer.countTokens() != 3) return info;
+
+        Version hwVersion = new Version(Integer.parseInt(hwverTokenizer.nextToken()),
+                                        Integer.parseInt(hwverTokenizer.nextToken()),
+                                        Integer.parseInt(hwverTokenizer.nextToken()));
+
+        String fwVersionStr = getString(tokens, DATAINDEX.FWVER);
+        StringTokenizer fwverTokenizer = new StringTokenizer(fwVersionStr, _verDelimiter);
+        if (fwverTokenizer.countTokens() != 3) return info;
+
+        Version fwVersion = new Version(Integer.parseInt(fwverTokenizer.nextToken()),
+                                        Integer.parseInt(fwverTokenizer.nextToken()),
+                                        Integer.parseInt(fwverTokenizer.nextToken()));
+
+        info.setValues(source, repeater, destination, latitude, longitude, altitude, satelliteCount, datetime, voltage, hwVersion, fwVersion);
         return info;
     }
 
@@ -97,7 +142,7 @@ public class Parser {
             return info;
         }
 
-        info.setValues(source, "", latitude, longitude, altitude, 0, datetime, 0.0f);
+        info.setValues(source, "", "", latitude, longitude, altitude, 0, datetime, 0.0f, new Version(0,0,0), new Version(0,0,0));
         return info;
     }
 
