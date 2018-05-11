@@ -2,6 +2,7 @@ package com.cosoros.livestockmanageapp;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Canvas;
@@ -23,13 +24,16 @@ import android.support.v4.content.ContextCompat;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.util.Pair;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -46,9 +50,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.Map;
+import java.util.TreeSet;
 
 enum DrawingType {
     DRAW_DEFAULT, DRAW_DIRECTION;
@@ -69,6 +72,7 @@ public class MainActivity extends AppCompatActivity
     private HashMap<String, LivestockInfo> _livestockInfoMap = new HashMap<>();
     private ParserThread _parserThread;
     private Database _dataBase;
+    private TreeSet<String> _pinKey = new TreeSet<>();
     private MapView _mapView;
 
 
@@ -299,11 +303,10 @@ public class MainActivity extends AppCompatActivity
                 _drawingMode = DrawingType.DRAW_DEFAULT;
             }
 
-
             if (_runMode == RunType.APP_START) {
                 JSONObject lastData;
-                JSONArray key;
-                JSONObject data;
+                JSONArray key, pinKey;
+                JSONObject data, pinData;
 
                 try {
                     lastData = _dataBase.readLast();
@@ -311,14 +314,26 @@ public class MainActivity extends AppCompatActivity
                     data = lastData.getJSONObject("data");
 
                     for (int i = 0; i < key.length(); i++) {
-                        Double lat, lon, alt;
-                        String lwd_id, utcTime;
+                        String lwd_id;
                         JSONObject dataDetail;
 
-                        dataDetail = data.getJSONObject(key.getString(i));
                         lwd_id = key.getString(i);
+                        dataDetail = data.getJSONObject(lwd_id);
                         _livestockInfoMap.put(lwd_id, Parser.parse(lwd_id, dataDetail));
+                    }
 
+                    pinKey = lastData.getJSONArray("pinKey");
+                    pinData = lastData.getJSONObject("pinData");
+
+                    for (int i = 0; i < pinKey.length(); i++) {
+                        String pin_name;
+                        JSONObject dataDetail;
+
+                        pin_name = pinKey.getString(i);
+                        dataDetail = pinData.getJSONObject(pin_name);
+
+                        _pinKey.add(pin_name);
+                        _livestockInfoMap.put(pin_name, Parser.parse(dataDetail.getString("name"), dataDetail, true));
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -368,32 +383,6 @@ public class MainActivity extends AppCompatActivity
                 canvas.drawCircle(_centerX + dx, _centerY + dy, 15, paint);
             }
 
-//            PointDouble p1 = getRelativePoint(animalList.get(0), animalList.get(1));
-//            float dx = (float)(x / 2) - (float)(p1.x * scale);
-//            float dy = (float)(y / 2) + (float)(p1.y * scale);
-//            canvas.drawCircle(center_x + dx, center_y + dy, 15, paint);
-//            int dist = (int)(animalList.get(1)._dis * 1000);
-//            String name = "[" + animalList.get(1)._name + "] : " + Integer.toString(dist) + " m";
-//            canvas.drawText(name, center_x + dx + 20, center_y + dy, paint);
-//
-//            paint.setColor(Color.BLUE);
-//            PointDouble p2 = get_relative_point(animalList.get(0), animalList.get(2));
-//            float dx2 = (float)(x / 2) - (float)(p2.x * scale);
-//            float dy2 = (float)(y / 2) + (float)(p2.y * scale);
-//            canvas.drawCircle(center_x + dx2, center_y + dy2, 15, paint);
-//            dist = (int)(animalList.get(2)._dis * 1000);
-//            name = "[" + animalList.get(2)._name + "] : " + Integer.toString(dist) + " m";
-//            canvas.drawText(name, center_x + dx2 + 20, center_y + dy2, paint);
-//
-//            paint.setColor(Color.GREEN);
-//            PointDouble p3 = get_relative_point(animalList.get(0), animalList.get(3));
-//            float dx3 = (float)(x / 2) - (float)(p3.x * scale);
-//            float dy3 = (float)(y / 2) + (float)(p3.y * scale);
-//            canvas.drawCircle(center_x + dx3, center_y + dy3, 15, paint);
-//            dist = (int)(animalList.get(3)._dis * 1000);
-//            name = "[" + animalList.get(3)._name + "] : " + Integer.toString(dist) + " m";
-//            canvas.drawText(name, center_x + dx3 + 20, center_y + dy3, paint);
-            //canvas.drawPoint(x / 2, y / 2, paint);
             float left, top, right, bottom;
             String scaleText;
             if (_scale * 2.5f < 1200) {
@@ -557,6 +546,104 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    private void pinSelectCategories() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        final CharSequence[] first = {"Home", "Repeater", "ETC"};
+
+        builder.setTitle("Categories")
+                .setItems(first, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        pinSetName(which);
+                    }
+                });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    private void pinSetName(final int category) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        final EditText getName = new EditText(this);
+
+        builder.setView(getName)
+                .setTitle("Place Name")
+                .setMessage("Enter the place name")
+                .setPositiveButton("Add", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        try {
+                            addPin(category, getName.getText().toString());
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                })
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+
+                    }
+                });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    private void addPin(int category, String name) throws JSONException {
+        JSONObject dataDetail = _dataBase.insertPin(category, name, _myGpsLocation.first, _myGpsLocation.second);
+        _pinKey.add(name);
+        _livestockInfoMap.put(name, Parser.parse(name, dataDetail, true));
+        _mapView.invalidate();
+    }
+
+    private void pinSelectRemove() {
+        final CharSequence[] pinList, pinKeyBackup;
+        pinList = _pinKey.toArray(new CharSequence[_pinKey.size()]);
+        final ArrayList checkedPin = new ArrayList();
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        Log.d("MainActivity", "pinSelectRemove-before builder");
+        builder.setTitle("Device filter")
+                .setMultiChoiceItems(pinList, null, new DialogInterface.OnMultiChoiceClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int index, boolean isChecked) {
+                        if (isChecked) {
+                            checkedPin.add(pinList[index]);
+                        } else {
+                            checkedPin.remove(pinList[index]);
+                        }
+                    }
+                })
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+
+                        for(int i = 0; i < checkedPin.size(); i++) {
+                            _pinKey.remove(checkedPin.get(i));
+                            _livestockInfoMap.remove(checkedPin.get(i));
+                        }
+
+                        deletePin(checkedPin);
+                    }
+                })
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+
+                    }
+                });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    private void deletePin(ArrayList pinList) {
+        _dataBase.deletePin(pinList);
+        _mapView.invalidate();
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -619,9 +706,12 @@ public class MainActivity extends AppCompatActivity
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        if (id == R.id.add_pin) {
+            pinSelectCategories();
+        }
+
+        if (id == R.id.delete_pin) {
+            pinSelectRemove();
         }
 
         return super.onOptionsItemSelected(item);

@@ -51,16 +51,16 @@ public class DatabaseActivity extends AppCompatActivity {
 
         builder.setTitle("Repeater filter")
                 .setItems(R.array.filter_repeater_options, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int index) {
-                _repeater = _repeaterOptions[index];
-                try {
-                    readDB();
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+                    @Override
+                    public void onClick(DialogInterface dialog, int index) {
+                        _repeater = _repeaterOptions[index];
+                        try {
+                            readDB();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
 
         AlertDialog dialog = builder.create();
         dialog.show();
@@ -75,14 +75,15 @@ public class DatabaseActivity extends AppCompatActivity {
 
         builder.setTitle("Device filter")
                 .setMultiChoiceItems(deviceList, null, new DialogInterface.OnMultiChoiceClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int index, boolean isChecked) {
-                if (isChecked) {
-                    checkedDevice.add(deviceList[index]);
-                } else {
-                    checkedDevice.remove(deviceList[index]);
-                }
-            }})
+                    @Override
+                    public void onClick(DialogInterface dialog, int index, boolean isChecked) {
+                        if (isChecked) {
+                            checkedDevice.add(deviceList[index]);
+                        } else {
+                            checkedDevice.remove(deviceList[index]);
+                        }
+                    }
+                })
                 .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {

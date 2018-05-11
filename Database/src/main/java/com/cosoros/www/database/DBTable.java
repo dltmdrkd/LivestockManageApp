@@ -22,6 +22,8 @@ public class DBTable {
     LsVaccination _lsVaccination = new LsVaccination();
     LsFamily _lsFamily = new LsFamily();
 
+    PinTable _pinTable = new PinTable();
+
     CodeLsType _codeLsType = new CodeLsType();
     CodeLsKind _codeLsKind = new CodeLsKind();
     CodeVaccine _codeVaccine = new CodeVaccine();
@@ -35,6 +37,8 @@ public class DBTable {
     public String getNameLsVaccination() { return _lsVaccination._table_name; }
     public String getNameLsFamily() { return _lsFamily._table_name; }
 
+    public String getNamePinTable() { return _pinTable._table_name; }
+
     public String getNameCodeLsType() { return _codeLsType._table_name; }
     public String getNameCodeLsKind() { return _codeLsKind._table_name; }
     public String getNameCodeVaccine() { return _codeVaccine._table_name; }
@@ -46,7 +50,6 @@ public class DBTable {
 
         return temp;
     }
-
 }
 
 class LwdHistory {
@@ -173,6 +176,22 @@ class LsFamily {
             "CREATE TABLE IF NOT EXISTS " + _table_name + "(" +
                     _ls_id + " TEXT, " + _ls_father + " TEXT, " + _ls_mother + " TEXT, " +
                     _primary_key + ");";
+}
+
+class PinTable {
+    String _table_name = "pin_table";
+    String _pin_category = "pin_category";
+    String _pin_name = "pin_name";
+    String _pin_lat = "pin_lat";
+    String _pin_lon = "pin_lon";
+    String _primary_key = "PRIMARY KEY (pin_name)";
+
+    String _create_table =
+            "CREATE TABLE IF NOT EXISTS " + _table_name + "(" +
+                    _pin_category + " INTEGER NOT NULL, " + _pin_name + " TEXT NOT NULL, " +
+                    _pin_lat + " REAL NOT NULL, " + _pin_lon + " REAL NOT NULL, " +
+                    _primary_key + ");";
+
 }
 
 class CodeLsType {

@@ -18,6 +18,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.TimeZone;
+import java.util.TreeSet;
 
 
 public class Database extends SQLiteOpenHelper {
@@ -60,10 +61,11 @@ public class Database extends SQLiteOpenHelper {
         db.execSQL(_table._lsVaccination._create_table);
         db.execSQL(_table._lsFamily._create_table);
 
+        db.execSQL(_table._pinTable._create_table);
+
         db.execSQL(_table._codeLsType._create_table);
         db.execSQL(_table._codeLsKind._create_table);
         db.execSQL(_table._codeVaccine._create_table);
-
 
         Log.d("DATABASE", "DB CREATE DONE");
     }
@@ -80,6 +82,8 @@ public class Database extends SQLiteOpenHelper {
         db.execSQL("DROP TABLE IF EXISTS " + _table._lsInfo._table_name);
         db.execSQL("DROP TABLE IF EXISTS " + _table._lsVaccination._table_name);
         db.execSQL("DROP TABLE IF EXISTS " + _table._lsFamily._table_name);
+
+        db.execSQL("DROP TABLE IF EXISTS " + _table._pinTable._table_name);
 
         db.execSQL("DROP TABLE IF EXISTS " + _table._codeLsType._table_name);
         db.execSQL("DROP TABLE IF EXISTS " + _table._codeLsKind._table_name);
@@ -121,6 +125,7 @@ public class Database extends SQLiteOpenHelper {
 
         db.insert(_table._lwdHistory._table_name, null, values);
 
+        db.close();
         Log.d("DATABASE", "DB INSERT DONE");
     }
 
@@ -160,7 +165,64 @@ public class Database extends SQLiteOpenHelper {
 //        values2.put(_table._lwdHistory._user_longitude, "127.014329");
 //
 //        db.insert(_table._lwdHistory._table_name, null, values2);
+        db.close();
         Log.d("DATABASE", "DB-SAMPLE INSERT DONE");
+    }
+
+    public JSONObject insertPin(int category, String pinName, double lat, double lon) throws JSONException {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        ContentValues values = new ContentValues();
+
+        values.put(_table._pinTable._pin_category, category);
+        values.put(_table._pinTable._pin_name, pinName);
+        values.put(_table._pinTable._pin_lat, lat);
+        values.put(_table._pinTable._pin_lon, lon);
+
+        db.insert(_table._pinTable._table_name, null, values);
+        db.close();
+        Log.d("DATABASE", "DB-PIN INSERT DONE");
+
+        JSONObject dataDetail = new JSONObject();
+        dataDetail.put("category", category);
+        dataDetail.put("lat", lat);
+        dataDetail.put("lon", lon);
+
+        return dataDetail;
+    }
+
+    public TreeSet<String> updatePin() {
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        TreeSet<String> pinKey = new TreeSet<>();
+        String sql = "SELECT pin_name FROM pin_table ORDER BY pin_name";
+
+        Cursor cursor = db.rawQuery(sql, null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                pinKey.add(cursor.getString(0));
+            } while (cursor.moveToNext());
+        }
+
+        cursor.close();
+        db.close();
+        return pinKey;
+    }
+
+    public void deletePin(ArrayList pinList) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        String sql = "DELETE FROM pin_table WHERE pin_name in (";
+
+
+        for(int i = 0; i < pinList.size() - 1; i++) {
+            sql += "'" + pinList.get(i) + "', ";
+        }
+        sql += "'" + pinList.get(pinList.size() - 1) + "')";
+
+        db.execSQL(sql);
+        db.close();
     }
 
     public JSONObject readLast() throws JSONException {
@@ -168,7 +230,8 @@ public class Database extends SQLiteOpenHelper {
 
         SQLiteDatabase db = this.getWritableDatabase();
 
-        // local time : utc_time -> datetime(utc_time, 'localtime')
+        // read last data
+        // if you want to change utc-time to local time : utc_time -> datetime(utc_time, 'localtime')
         String sql =
                 " SELECT lwd_id, data_latitude, data_longitude, data_altitude, utc_time " +
                 " FROM lwd_history a, " +
@@ -178,9 +241,6 @@ public class Database extends SQLiteOpenHelper {
                 " WHERE a.lwd_id = b.id" +
                 "   AND a.utc_time = b.time " +
                 " ORDER BY lwd_id; ";
-
-//        ArrayList readData = new ArrayList();
-//        ArrayList columnData = new ArrayList();
 
         JSONObject readData = new JSONObject();
         JSONArray key = new JSONArray();
@@ -198,19 +258,44 @@ public class Database extends SQLiteOpenHelper {
                 dataDetail.put("lat", cursor.getString(i++));
                 dataDetail.put("lon", cursor.getString(i++));
                 dataDetail.put("alt", cursor.getString(i++));
-                dataDetail.put("time", cursor.getString(i++));
+                dataDetail.put("time", cursor.getString(i));
                 data.put(lwd_id, dataDetail);
-
-                Log.d("DATABASE", "READ-LAST DATA");
 
             } while (cursor.moveToNext());
         }
 
         cursor.close();
 
+
+        // read pin data
+        String sqlPin = "SELECT * FROM pin_table ORDER BY pin_name;";
+        JSONArray pinKey = new JSONArray();
+        JSONObject pinData = new JSONObject();
+
+        cursor = db.rawQuery(sqlPin, null);
+        if (cursor.moveToFirst()) {
+            do {
+                int i = 0;
+                String pin_name;
+                JSONObject dataDetail = new JSONObject();
+
+                pin_name = cursor.getString(i++);
+                pinKey.put(pin_name);
+                dataDetail.put("category", cursor.getString(i++));
+                dataDetail.put("lat", cursor.getString(i++));
+                dataDetail.put("lon", cursor.getString(i));
+                pinData.put(pin_name, dataDetail);
+
+            } while (cursor.moveToNext());
+        }
+
+
         readData.put("key", key);
         readData.put("data", data);
+        readData.put("pinKey", pinKey);
+        readData.put("pinData", pinData);
 
+        db.close();
         Log.d("DATABASE", "DB READ-LAST DONE");
         Log.d("DATABASE", "------------------------------------------------------------------------------EOF");
         return readData;
@@ -292,6 +377,7 @@ public class Database extends SQLiteOpenHelper {
         cursor.close();
 
         readData.add(columnName);
+        db.close();
         return readData;
     }
 }

@@ -9,8 +9,15 @@
         app:showAsAction="ifRoom" />
 
     <item
-        android:id="@+id/action_settings"
+        android:id="@+id/add_pin"
         android:orderInCategory="100"
-        android:title="@string/action_settings"
+        android:title="@string/add_pin"
         app:showAsAction="never" />
+
+    <item
+        android:id="@+id/delete_pin"
+        android:orderInCategory="101"
+        android:title="@string/delete_pin"
+        app:showAsAction="never" />
+
 </menu>

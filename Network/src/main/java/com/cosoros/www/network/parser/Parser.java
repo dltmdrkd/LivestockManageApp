@@ -146,4 +146,17 @@ public class Parser {
         return info;
     }
 
+    public static LivestockInfo parse(String name, JSONObject dataDetail, boolean check) throws  JSONException {
+        LivestockInfo info = new LivestockInfo();
+        Double latitude, longitude;
+        String pinType;
+
+        pinType = dataDetail.getString("category");
+        latitude = dataDetail.getDouble("lat");
+        longitude = dataDetail.getDouble("lon");
+
+        info.setValues(name, pinType, "", latitude, longitude, 0.0, 0,null, 0.0f, new Version(0, 0, 0), new Version(0, 0, 0));
+        return info;
+    }
+
 }
