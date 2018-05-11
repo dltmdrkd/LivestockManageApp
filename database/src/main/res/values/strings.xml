@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">Database</string>
+
+    <string name="db_refresh">DB refresh</string>
+    <string name="sort_by_time">Sorting by UTC Time</string>
+    <string name="filter_repeater">Repeater filter</string>
+    <string name="filter_device">Device filter</string>
+    <string-array name="filter_repeater_options">
+        <item>Repeater only</item>
+        <item>No repeater</item>
+        <item>Anywhere</item>
+    </string-array>
 </resources>

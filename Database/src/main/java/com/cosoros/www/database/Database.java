@@ -5,8 +5,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.support.annotation.NonNull;
-import android.support.v4.util.ArrayMap;
 import android.util.Log;
 import android.util.Pair;
 
@@ -18,11 +16,7 @@ import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.Arrays;
 import java.util.TimeZone;
 
 
@@ -70,6 +64,7 @@ public class Database extends SQLiteOpenHelper {
         db.execSQL(_table._codeLsKind._create_table);
         db.execSQL(_table._codeVaccine._create_table);
 
+
         Log.d("DATABASE", "DB CREATE DONE");
     }
 
@@ -104,12 +99,6 @@ public class Database extends SQLiteOpenHelper {
 
         SQLiteDatabase db = this.getWritableDatabase();
 
-        // get utc time from parser as Date type
-//        Date utcTime = new Date(System.currentTimeMillis());
-//        String localDate = _dateFormat.format(utcTime);
-//        Log.d("DATABASE-TRY", "INSERT-utcTime : " + utcTime);
-//        Log.d("DATABASE-TRY", "INSERT-localDate : " + localDate);
-
         ContentValues values = new ContentValues();
 
         values.put(_table._lwdHistory._lwd_id, info.source());
@@ -135,6 +124,45 @@ public class Database extends SQLiteOpenHelper {
         Log.d("DATABASE", "DB INSERT DONE");
     }
 
+    public void insertSample(String repeater) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        ContentValues values = new ContentValues();
+
+        values.put(_table._lwdHistory._lwd_id, "A504");
+        values.put(_table._lwdHistory._ls_id, "A0001M");
+        values.put(_table._lwdHistory._data_origin, "[0042A504A50FA0047.996964^0107.584976^1581.30^10^20180404^010043^07.20^]");
+        values.put(_table._lwdHistory._data_latitude, "37.308690");
+        values.put(_table._lwdHistory._data_longitude, "126.992449");
+        values.put(_table._lwdHistory._data_altitude, "150.10");
+        values.put(_table._lwdHistory._data_satellite_cnt, "8");
+        values.put(_table._lwdHistory._data_time, "20180404015923");
+        values.put(_table._lwdHistory._data_battery, "7.19999980926514");
+        values.put(_table._lwdHistory._data_repeater, repeater);
+        values.put(_table._lwdHistory._user_latitude, "37.302443");
+        values.put(_table._lwdHistory._user_longitude, "127.014329");
+
+        db.insert(_table._lwdHistory._table_name, null, values);
+
+//        ContentValues values2 = new ContentValues();
+//
+//        values2.put(_table._lwdHistory._lwd_id, "A502");
+//        values2.put(_table._lwdHistory._ls_id, "A0001M");
+//        values2.put(_table._lwdHistory._data_origin, "[0042A504A50FA0047.996964^0107.584976^1581.30^10^20180404^010043^07.20^]");
+//        values2.put(_table._lwdHistory._data_latitude, "37.283029");
+//        values2.put(_table._lwdHistory._data_longitude, "127.045149");
+//        values2.put(_table._lwdHistory._data_altitude, "150.10");
+//        values2.put(_table._lwdHistory._data_satellite_cnt, "8");
+//        values2.put(_table._lwdHistory._data_time, "20180404015923");
+//        values2.put(_table._lwdHistory._data_battery, "7.19999980926514");
+//        values2.put(_table._lwdHistory._data_repeater, "0000");
+//        values2.put(_table._lwdHistory._user_latitude, "37.302443");
+//        values2.put(_table._lwdHistory._user_longitude, "127.014329");
+//
+//        db.insert(_table._lwdHistory._table_name, null, values2);
+        Log.d("DATABASE", "DB-SAMPLE INSERT DONE");
+    }
+
     public JSONObject readLast() throws JSONException {
         Log.d("DATABASE", "DB READ LAST START");
 
@@ -142,14 +170,14 @@ public class Database extends SQLiteOpenHelper {
 
         // local time : utc_time -> datetime(utc_time, 'localtime')
         String sql =
-                "SELECT lwd_id, data_latitude, data_longitude, data_altitude, utc_time " +
-                "FROM lwd_history a, " +
-                "     (SELECT lwd_id id, MAX(utc_time) time " +
-                "      FROM lwd_history" +
-                "      GROUP BY lwd_id) b " +
-                "WHERE a.lwd_id = b.id" +
-                "  AND a.utc_time = b.time " +
-                "ORDER BY lwd_id";
+                " SELECT lwd_id, data_latitude, data_longitude, data_altitude, utc_time " +
+                " FROM lwd_history a, " +
+                "      (SELECT lwd_id id, MAX(utc_time) time " +
+                "       FROM lwd_history" +
+                "       GROUP BY lwd_id) b " +
+                " WHERE a.lwd_id = b.id" +
+                "   AND a.utc_time = b.time " +
+                " ORDER BY lwd_id; ";
 
 //        ArrayList readData = new ArrayList();
 //        ArrayList columnData = new ArrayList();
@@ -157,13 +185,13 @@ public class Database extends SQLiteOpenHelper {
         JSONObject readData = new JSONObject();
         JSONArray key = new JSONArray();
         JSONObject data = new JSONObject();
-        JSONObject dataDetail = new JSONObject();
 
         Cursor cursor = db.rawQuery(sql, null);
         if (cursor.moveToFirst()) {
             do {
                 int i = 0;
                 String lwd_id;
+                JSONObject dataDetail = new JSONObject();
 
                 lwd_id = cursor.getString(i++);
                 key.put(lwd_id);
@@ -188,60 +216,82 @@ public class Database extends SQLiteOpenHelper {
         return readData;
     }
 
-    public ArrayList read(String table) {
-        Log.d("DATABASE", "DB READ START");
+    public ArrayList read(JSONObject filter, boolean order) throws JSONException {
 
-        SQLiteDatabase db = this.getWritableDatabase();
         String sql
-                = "SELECT "
-                + _table._lwdHistory._utc_time + ", "
-                + "(case " +  _table._lwdHistory._data_repeat
-                + "    when '0000' then '-' "
-                + "    else " + _table._lwdHistory._data_repeat
-                + " end) data_repeat, "
-                + _table._lwdHistory._lwd_id + ", "
-                + _table._lwdHistory._ls_id + ", "
-                + "substr(" + _table._lwdHistory._data_time + ", 1, 4)"
-                + " || '/' || substr(" + _table._lwdHistory._data_time + ", 5, 2)"
-                + " || '/' || substr(" + _table._lwdHistory._data_time + ", 7, 2)"
-                + " || ' ' || substr(" + _table._lwdHistory._data_time + ", 9, 2)"
-                + " || ':' || substr(" + _table._lwdHistory._data_time + ", 11, 2)"
-                + " || ':' || substr(" + _table._lwdHistory._data_time + ", 13, 2) as time, "
-                + _table._lwdHistory._data_latitude + ", "
-                + _table._lwdHistory._data_longitude + ", "
-                + _table._lwdHistory._data_altitude + ", "
-                + _table._lwdHistory._data_satellite_cnt + ", "
-                + _table._lwdHistory._data_battery + ", "
-                + _table._lwdHistory._data_origin
-                + " FROM " + table
-                + " ORDER BY utc_time DESC;";
+                = " SELECT " +
+                "     utc_time, lwd_id, " +
+                "     (case data_repeater " +
+                "           when '0000' then '-' " +
+                "           else data_repeater " +
+                "       end) data_repeater, " +
+                "     lwd_id, ls_id, " +
+                "     substr(data_time, 1, 4) || '/' || substr(data_time, 5, 2) || '/' || substr(data_time, 7, 2) || ' ' || " +
+                "     substr(data_time, 9, 2) || ':' || substr(data_time, 11, 2) || ':' || substr(data_time, 13, 2) data_time, " +
+                "     data_latitude, data_longitude, data_altitude, data_satellite_cnt, data_battery, data_origin ";
+        sql = sql + "FROM lwd_history ";
+
+        String sqlWhere = " WHERE 1 = 1 ";
+        String sqlOrder;
+
+        // device id filter
+        if (!filter.isNull("device")) {
+            JSONArray deviceFilter = filter.getJSONArray("device");
+            sqlWhere += " AND ( ";
+
+            for (int i = 0; i < deviceFilter.length(); i++) {
+                sqlWhere += " lwd_id = '" + deviceFilter.getString(i);
+                if (i + 1 < deviceFilter.length()) {
+                    sqlWhere += "' OR ";
+                }
+            }
+
+            sqlWhere += "') ";
+        }
+
+        // repeater filter
+        if (!filter.isNull("repeater")) {
+            switch (filter.getString("repeater")) {
+                case "REPEATER":
+                    sqlWhere += " AND data_repeater != '0000' ";
+                    break;
+                case "NO_REPEATER":
+                    sqlWhere += " AND data_repeater = '0000' ";
+                    break;
+                case "ANYWHERE":
+                default:
+                    break;
+            }
+        }
+
+        // true : order by desc   /   false : order by asc
+        if (order) {
+            sqlOrder = " ORDER BY utc_time desc; ";
+        } else {
+            sqlOrder = " ORDER BY utc_time asc; ";
+        }
+
+        sql = sql + sqlWhere + sqlOrder;
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery(sql, null);
 
         ArrayList readData = new ArrayList();
-        ArrayList columnName = _table.getColumnName(table);
-        Cursor cursor = db.rawQuery(sql, null);
+        ArrayList columnName = new ArrayList(Arrays.asList(cursor.getColumnNames()));
+
         if (cursor.moveToFirst()) {
             do {
                 ArrayList rowData = new ArrayList();
-
-                for(int i = 0; i < columnName.size(); i++) {
-                    Map tempData = new HashMap();
-                    tempData.put("colName", columnName.get(i));
-                    tempData.put("data", cursor.getString(i));
-
-                    rowData.add(tempData);
+                for (int i = 0; i < columnName.size(); i++) {
+                    rowData.add(cursor.getString(i));
                 }
 
                 readData.add(rowData);
 
-                Log.d("DATABASE", "READ DATA");
-
-            } while (cursor.moveToNext());
+            } while(cursor.moveToNext());
         }
         cursor.close();
 
         readData.add(columnName);
-        Log.d("DATABASE", "DB READ DONE");
-        Log.d("DATABASE", "------------------------------------------------------------------------------EOF");
         return readData;
     }
 }

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/db_refresh"
+        android:icon="@drawable/baseline_refresh_white_24"
+        android:title="@string/db_refresh"
+        app:showAsAction="always"
+    />
+
+    <item
+        android:id="@+id/sort_by_time"
+        android:icon="@drawable/baseline_watch_later_white_24"
+        android:title="@string/sort_by_time"
+        app:showAsAction="ifRoom"
+    />
+
+    <item
+        android:id="@+id/filter_repeater"
+        android:icon="@drawable/baseline_settings_input_antenna_white_24"
+        android:title="@string/filter_repeater"
+        app:showAsAction="ifRoom"
+    />
+
+    <item
+        android:id="@+id/filter_device"
+        android:icon="@drawable/baseline_sort_white_24"
+        android:title="@string/filter_device"
+        app:showAsAction="ifRoom"
+    />
+
+</menu>
