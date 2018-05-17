@@ -5,11 +5,16 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.Rect;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -70,11 +75,17 @@ public class MainActivity extends AppCompatActivity
     private Pair<Double, Double> _myGpsLocation = new Pair<>(37.30362, 126.99712);
     private Pair<Double, Double> _myLastGpsLocation = new Pair<>(37.30362, 126.99712);
     private HashMap<String, LivestockInfo> _livestockInfoMap = new HashMap<>();
+    private CheckerThread _checkerThread;
     private ParserThread _parserThread;
     private Database _dataBase;
     private TreeSet<String> _pinKey = new TreeSet<>();
     private MapView _mapView;
-
+    private float[] _gravity;
+    private float[] _geomagnetic;
+    private int _azimuth, _pitch, _roll;
+    private float _lastDrawnAzimuth = -200;
+    private MagneticSensorListener _magneticListener;
+    private boolean _rotateRequested = false;
 
     private void startLocationService() {
         // 위치 관리자 객체 참조
@@ -82,8 +93,8 @@ public class MainActivity extends AppCompatActivity
 
         // 위치 정보를 받을 리스너 생성
         GPSListener gpsListener = new GPSListener();
-        long minTime = 10000;
-        float minDistance = 0;
+        long minTime = 60 * 1000; // 60 seconds.
+        float minDistance = 5; // 5 meters.
 
         try {
             // GPS를 이용한 위치 요청
@@ -122,9 +133,9 @@ public class MainActivity extends AppCompatActivity
         }
 
         if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "권한 있음", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Permission Granted", Toast.LENGTH_LONG).show();
         } else {
-            Toast.makeText(this, "권한 없음", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Permission Denied", Toast.LENGTH_LONG).show();
 
             if (ActivityCompat.shouldShowRequestPermissionRationale(this, permissions[0])) {
                 Toast.makeText(this, "권한 설명 필요함.", Toast.LENGTH_LONG).show();
@@ -155,6 +166,43 @@ public class MainActivity extends AppCompatActivity
         public void onStatusChanged(String provider, int status, Bundle extras) {
         }
 
+    }
+
+    private class MagneticSensorListener implements SensorEventListener {
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+                _gravity = event.values;
+            }
+            else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+                _geomagnetic = event.values;
+            }
+            if (_gravity != null && _geomagnetic != null) {
+                float R[] = new float[9];
+                float I[] = new float[9];
+                boolean success = SensorManager.getRotationMatrix(R, I, _gravity, _geomagnetic);
+                if (success) {
+                    float orientation[] = new float[3];
+                    SensorManager.getOrientation(R, orientation);
+                    //float azimuth = (float)Math.toDegrees(orientation[0]);
+                    //if (Math.abs(azimuth - _azimuth) > 3) {
+                    //    _azimuth = azimuth;
+                    //}
+                    _azimuth = (int)Math.toDegrees(orientation[0]);
+                    //_pitch = (float)Math.toDegrees(orientation[1]);
+                    //_roll = (float)Math.toDegrees(orientation[2]);
+                    Log.d("Azimuth","" + _azimuth);
+                    _mapView.invalidate();
+                }
+                _gravity = null;
+                _geomagnetic = null;
+            }
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+        }
     }
 
     private final Handler _handler = new Handler() {
@@ -193,6 +241,29 @@ public class MainActivity extends AppCompatActivity
         }
         }
     };
+
+
+    private class CheckerThread extends Thread {
+
+        public void run() {
+            boolean _previous = false;
+            while (true) {
+                if (_rotateRequested != _previous) {
+                    SensorManager manager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
+                    if (_rotateRequested) {
+                        Sensor magnet = manager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+                        Sensor accel = manager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+                        manager.registerListener(_magneticListener, magnet, SensorManager.SENSOR_DELAY_NORMAL);
+                        manager.registerListener(_magneticListener, accel, SensorManager.SENSOR_DELAY_NORMAL);
+                    }
+                    else {
+                        manager.unregisterListener(_magneticListener);
+                    }
+                    _previous = _rotateRequested;
+                }
+            }
+        }
+    }
 
     private class ParserThread extends Thread {
         private boolean _quitRequested = false;
@@ -238,7 +309,7 @@ public class MainActivity extends AppCompatActivity
 
     private class MapView extends View {
         protected int _scale = 40; // max scale. 100 pixel == 4km.
-        protected int _centerX  = 0, _centerY = 0;
+        protected int _centerX = 0, _centerY = 0;
         // touch event.
         static final int NONE = 0;
         static final int DRAG = 1;
@@ -253,34 +324,34 @@ public class MainActivity extends AppCompatActivity
             //Resources r = c.getResources();
             //sun_image = BitmapFactory.decodeResource(r, R.drawable.sun);
         }
+
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
+            Bitmap bufferBitmap = Bitmap.createBitmap(canvas.getWidth() + 400, canvas.getHeight() + 400, Bitmap.Config.ARGB_8888);
+            Canvas bufferCanvas = new Canvas(bufferBitmap);
+
             int x = getWidth();
             int y = getHeight();
-            int viewCenterX = _centerX + x / 2;
-            int viewCenterY = _centerY + y / 2;
+            int viewCenterX = _centerX + x / 2 + 200;
+            int viewCenterY = _centerY + y / 2 + 200;
             Paint paint = new Paint();
 
             // draw axis and circles.
             paint.setStyle(Paint.Style.STROKE);
             paint.setColor(Color.BLACK);
-            canvas.drawLine(0, viewCenterY, x, viewCenterY, paint);
-            canvas.drawLine(viewCenterX, 0, viewCenterX, y, paint);
-            for (int i = 0; i < 5; ++i) {
-                canvas.drawCircle(viewCenterX, viewCenterY, (i + 1) * _scale * 2.5f, paint);
-            }
-            Rect dst = new Rect((int)(viewCenterX + 5 * 2.5f * _scale - 50),
-                    (int)(viewCenterY - 50),
-                    (int)(viewCenterX + 5 * 2.5f * _scale + 50),
-                    (int)(viewCenterY + 50));
-            //canvas.drawBitmap(sun_image, null, dst, null);
+            bufferCanvas.drawLine(0, viewCenterY, x + 400, viewCenterY, paint);
+            bufferCanvas.drawLine(viewCenterX, 0, viewCenterX, y + 400, paint);
 
+            for (int i = 0; i < 5; ++i) {
+                bufferCanvas.drawCircle(viewCenterX, viewCenterY, (i + 1) * _scale * 2.5f, paint);
+            }
             // draw my location on center
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(Color.RED);
             paint.setTextSize(35);
-            canvas.drawCircle(viewCenterX, viewCenterY, 15, paint);
+            bufferCanvas.drawCircle(viewCenterX, viewCenterY, 15, paint);
+            bufferCanvas.drawText("N", viewCenterX - 17, viewCenterY - _scale * 12.5f, paint);
 
             if (_drawingMode == DrawingType.DRAW_DIRECTION) {
 //                 draw my direction
@@ -296,10 +367,10 @@ public class MainActivity extends AppCompatActivity
                 path.lineTo(viewCenterX, viewCenterY + 17 + 17);
                 path.close();
 
-                canvas.save();
-                canvas.rotate(-direction[1], viewCenterX, viewCenterY);
-                canvas.drawPath(path, paint);
-                canvas.restore();
+                bufferCanvas.save();
+                bufferCanvas.rotate(-direction[1], viewCenterX, viewCenterY);
+                bufferCanvas.drawPath(path, paint);
+                bufferCanvas.restore();
                 _drawingMode = DrawingType.DRAW_DEFAULT;
             }
 
@@ -342,17 +413,43 @@ public class MainActivity extends AppCompatActivity
                 _runMode = RunType.APP_SLEEP;
             }
 
+            for (String key : _livestockInfoMap.keySet()) {
+                LivestockInfo info = _livestockInfoMap.get(key);
+                Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
+
+                float dx = (float) (x / 2) - (float) (point.first * _scale);
+                float dy = (float) (y / 2) + (float) (point.second * _scale);
+
+                bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, paint);
+            }
+
+            if (_rotateRequested) {
+                if (_lastDrawnAzimuth == -200 || Math.abs(_lastDrawnAzimuth - _azimuth) > 2) {
+                    _lastDrawnAzimuth = _azimuth;
+                }
+                Matrix rotateMatrix = new Matrix();
+                rotateMatrix.postRotate(-_lastDrawnAzimuth, viewCenterX, viewCenterY);
+                Bitmap rotateBitmap = Bitmap.createBitmap(bufferBitmap, 0, 0, bufferBitmap.getWidth(), bufferBitmap.getHeight(), rotateMatrix, true);
+                int rotateTransX = rotateBitmap.getWidth() / 2 - viewCenterX;
+                int rotateTransY = rotateBitmap.getHeight() / 2 - viewCenterY;
+
+                canvas.drawBitmap(rotateBitmap, -rotateTransX - 200, -rotateTransY - 200, null);
+            }
+            else {
+                canvas.drawBitmap(bufferBitmap, -200, -200, null);
+            }
+
             int cnt = 0;
-            for (String key : _livestockInfoMap.keySet()){
+            for (String key : _livestockInfoMap.keySet()) {
                 LivestockInfo info = _livestockInfoMap.get(key);
 
                 Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
                 float distance[] = new float[2];
                 Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), distance);
-                String name = "[" + info.source() + "]" + Float.toString((float)Math.round(distance[0]) / 1000) + "km";
+                String name = "[" + info.source() + "]" + Float.toString((float) Math.round(distance[0]) / 1000) + "km";
 
-                float dx = (float)(x / 2) - (float)(point.first * _scale);
-                float dy = (float)(y / 2) + (float)(point.second * _scale);
+                float dx = (float) (x / 2) - (float) (point.first * _scale);
+                float dy = (float) (y / 2) + (float) (point.second * _scale);
 
 //                String angle = "[Angle]" + Integer.toString(Math.round(distance[1]));
 //                canvas.drawText(angle, _centerX + dx + 40, _centerY + dy + 40 , paint);
@@ -380,27 +477,7 @@ public class MainActivity extends AppCompatActivity
                 }
 
                 canvas.drawText(name, _centerX + dx + 40, _centerY + dy, paint);
-                canvas.drawCircle(_centerX + dx, _centerY + dy, 15, paint);
             }
-
-            float left, top, right, bottom;
-            String scaleText;
-            if (_scale * 2.5f < 1200) {
-                left = x - _scale * 2.5f / 2 - 50;
-                scaleText = "1000 m";
-            }
-            else {
-                left = x - _scale * 2.5f / 20 - 50;
-                scaleText = "100 m";
-            }
-            top = y - 100;
-            right = x - 50;
-            bottom = y - 50;
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setColor(Color.BLACK);
-            canvas.drawText(scaleText, x - 250, y - 120, paint);
-            paint.setStrokeWidth(5);
-            canvas.drawRect(left, top, right, bottom, paint);
         }
 
         public boolean onTouchEvent(MotionEvent event) {
@@ -413,7 +490,7 @@ public class MainActivity extends AppCompatActivity
                     break;
                 }
                 case MotionEvent.ACTION_MOVE: {// touch move.
-                    if (mode == DRAG) {
+                    if (mode == DRAG && _rotateRequested != true) {
                         _centerX -= _dragPrevX - (int) event.getX();
                         _centerY -= _dragPrevY - (int) event.getY();
                         _dragPrevX = (int) event.getX();
@@ -425,7 +502,7 @@ public class MainActivity extends AppCompatActivity
                             // zoom in.
                             _scale += 5;
                             if (_scale > 400) _scale = 400;
-                        } else if (_prevDistance - _currentDistance > 10){
+                        } else if (_prevDistance - _currentDistance > 10) {
                             // zoom out.
                             _scale -= 5;
                             if (_scale < 40) _scale = 40;
@@ -544,11 +621,17 @@ public class MainActivity extends AppCompatActivity
             }
             return Pair.create(lon_dist * lon, lat_dist * lat);
         }
+
+        public void setCenter() {
+            _centerX = 0;
+            _centerY = 0;
+            invalidate();
+        }
     }
 
     private void pinSelectCategories() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        final CharSequence[] first = {"Home", "Repeater", "ETC"};
+        final CharSequence[] first = { "Home", "Repeater", "ETC" };
 
         builder.setTitle("Categories")
                 .setItems(first, new DialogInterface.OnClickListener() {
@@ -657,8 +740,18 @@ public class MainActivity extends AppCompatActivity
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                _rotateRequested = !_rotateRequested;
+                String msg;
+                if (_rotateRequested) {
+                    _mapView.setCenter();
+                    msg = "Tracking North Requested";
+                }
+                else {
+                    _azimuth = 0;
+                    _mapView.setCenter();
+                    msg = "Tracking North Disabled";
+                }
+                Snackbar.make(view, msg, Snackbar.LENGTH_LONG).setAction("Action", null).show();
             }
         });
 
@@ -680,6 +773,9 @@ public class MainActivity extends AppCompatActivity
         _parserThread.start();
         checkDangerousPermissions();
         startLocationService();
+        _magneticListener = new MagneticSensorListener();
+        _checkerThread = new CheckerThread();
+        _checkerThread.start();
     }
 
     @Override
@@ -764,5 +860,24 @@ public class MainActivity extends AppCompatActivity
             }
         }
         return super.onPrepareOptionsMenu(menu);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (_rotateRequested) {
+            SensorManager manager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
+            Sensor magnet = manager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+            Sensor accel = manager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            manager.registerListener(_magneticListener, magnet, SensorManager.SENSOR_DELAY_NORMAL);
+            manager.registerListener(_magneticListener, accel, SensorManager.SENSOR_DELAY_NORMAL);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        SensorManager manager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
+        manager.unregisterListener(_magneticListener);
     }
 }
