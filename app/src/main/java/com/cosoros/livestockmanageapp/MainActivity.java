@@ -55,6 +55,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.TreeSet;
 
@@ -82,8 +83,7 @@ public class MainActivity extends AppCompatActivity
     private MapView _mapView;
     private float[] _gravity;
     private float[] _geomagnetic;
-    private int _azimuth, _pitch, _roll;
-    private float _lastDrawnAzimuth = -200;
+    private float _azimuth, _pitch, _roll;
     private MagneticSensorListener _magneticListener;
     private boolean _rotateRequested = false;
 
@@ -169,6 +169,26 @@ public class MainActivity extends AppCompatActivity
     }
 
     private class MagneticSensorListener implements SensorEventListener {
+        float _azimuths[] = new float[8];
+        byte _index = 0;
+
+        public MagneticSensorListener() {
+            resetValues();
+        }
+
+        public void resetValues() {
+            Arrays.fill(_azimuths, 0);
+            _index = 0;
+        }
+
+        private float averageAzimuth() {
+            float sum = 0;
+            for (int i = 0; i < _azimuths.length; ++i) {
+                sum += _azimuths[i];
+            }
+            return sum / _azimuths.length;
+        }
+
         @Override
         public void onSensorChanged(SensorEvent event) {
             if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
@@ -184,11 +204,10 @@ public class MainActivity extends AppCompatActivity
                 if (success) {
                     float orientation[] = new float[3];
                     SensorManager.getOrientation(R, orientation);
-                    //float azimuth = (float)Math.toDegrees(orientation[0]);
-                    //if (Math.abs(azimuth - _azimuth) > 3) {
-                    //    _azimuth = azimuth;
-                    //}
-                    _azimuth = (int)Math.toDegrees(orientation[0]);
+                    float azimuth = (int)Math.toDegrees(orientation[0]);
+                    _azimuths[_index++] = azimuth;
+                    if (_index == 8) _index = 0;
+                    _azimuth = averageAzimuth();
                     //_pitch = (float)Math.toDegrees(orientation[1]);
                     //_roll = (float)Math.toDegrees(orientation[2]);
                     Log.d("Azimuth","" + _azimuth);
@@ -317,41 +336,54 @@ public class MainActivity extends AppCompatActivity
         int mode = NONE;
         double _prevDistance = 0.0, _currentDistance = 0.0;
         int _dragPrevX = 0, _dragPrevY = 0;
+        private Bitmap _bufferBitmap;
+        private Canvas _bufferCanvas;
+        private Matrix _rotateMatrix;
+        private Paint _paint;
+        private float[] _distance;
 
         //private Bitmap sun_image;
         public MapView(Context c) {
             super(c);
             //Resources r = c.getResources();
             //sun_image = BitmapFactory.decodeResource(r, R.drawable.sun);
+            //_bufferBitmap = createBitmap(getWidth() + 400, getHeight() + 400, Bitmap.Config.ARGB_8888);
+            _bufferCanvas = new Canvas();
+            _rotateMatrix = new Matrix();
+            _paint = new Paint();
+            _distance = new float[1];
         }
 
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            Bitmap bufferBitmap = Bitmap.createBitmap(canvas.getWidth() + 400, canvas.getHeight() + 400, Bitmap.Config.ARGB_8888);
-            Canvas bufferCanvas = new Canvas(bufferBitmap);
 
+            if (_bufferBitmap == null) {
+                _bufferBitmap = Bitmap.createBitmap(canvas.getWidth() + 400, canvas.getHeight() + 400, Bitmap.Config.ARGB_8888);
+            }
+            _bufferBitmap.eraseColor(Color.TRANSPARENT);
+            _bufferCanvas.setBitmap(_bufferBitmap);
             int x = getWidth();
             int y = getHeight();
             int viewCenterX = _centerX + x / 2 + 200;
             int viewCenterY = _centerY + y / 2 + 200;
-            Paint paint = new Paint();
+
 
             // draw axis and circles.
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setColor(Color.BLACK);
-            bufferCanvas.drawLine(0, viewCenterY, x + 400, viewCenterY, paint);
-            bufferCanvas.drawLine(viewCenterX, 0, viewCenterX, y + 400, paint);
+            _paint.setStyle(Paint.Style.STROKE);
+            _paint.setColor(Color.BLACK);
+            _bufferCanvas.drawLine(0, viewCenterY, x + 400, viewCenterY, _paint);
+            _bufferCanvas.drawLine(viewCenterX, 0, viewCenterX, y + 400, _paint);
 
             for (int i = 0; i < 5; ++i) {
-                bufferCanvas.drawCircle(viewCenterX, viewCenterY, (i + 1) * _scale * 2.5f, paint);
+                _bufferCanvas.drawCircle(viewCenterX, viewCenterY, (i + 1) * _scale * 2.5f, _paint);
             }
             // draw my location on center
-            paint.setStyle(Paint.Style.FILL);
-            paint.setColor(Color.RED);
-            paint.setTextSize(35);
-            bufferCanvas.drawCircle(viewCenterX, viewCenterY, 15, paint);
-            bufferCanvas.drawText("N", viewCenterX - 17, viewCenterY - _scale * 12.5f, paint);
+            _paint.setStyle(Paint.Style.FILL);
+            _paint.setColor(Color.RED);
+            _paint.setTextSize(35);
+            _bufferCanvas.drawCircle(viewCenterX, viewCenterY, 15, _paint);
+            _bufferCanvas.drawText("N", viewCenterX - 17, viewCenterY - _scale * 12.5f, _paint);
 
             if (_drawingMode == DrawingType.DRAW_DIRECTION) {
 //                 draw my direction
@@ -367,10 +399,10 @@ public class MainActivity extends AppCompatActivity
                 path.lineTo(viewCenterX, viewCenterY + 17 + 17);
                 path.close();
 
-                bufferCanvas.save();
-                bufferCanvas.rotate(-direction[1], viewCenterX, viewCenterY);
-                bufferCanvas.drawPath(path, paint);
-                bufferCanvas.restore();
+                _bufferCanvas.save();
+                _bufferCanvas.rotate(-direction[1], viewCenterX, viewCenterY);
+                _bufferCanvas.drawPath(path, _paint);
+                _bufferCanvas.restore();
                 _drawingMode = DrawingType.DRAW_DEFAULT;
             }
 
@@ -420,23 +452,20 @@ public class MainActivity extends AppCompatActivity
                 float dx = (float) (x / 2) - (float) (point.first * _scale);
                 float dy = (float) (y / 2) + (float) (point.second * _scale);
 
-                bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, paint);
+                _bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, _paint);
             }
 
             if (_rotateRequested) {
-                if (_lastDrawnAzimuth == -200 || Math.abs(_lastDrawnAzimuth - _azimuth) > 2) {
-                    _lastDrawnAzimuth = _azimuth;
-                }
-                Matrix rotateMatrix = new Matrix();
-                rotateMatrix.postRotate(-_lastDrawnAzimuth, viewCenterX, viewCenterY);
-                Bitmap rotateBitmap = Bitmap.createBitmap(bufferBitmap, 0, 0, bufferBitmap.getWidth(), bufferBitmap.getHeight(), rotateMatrix, true);
+                _rotateMatrix.reset();
+                _rotateMatrix.postRotate(-_azimuth, viewCenterX, viewCenterY);
+                Bitmap rotateBitmap = Bitmap.createBitmap(_bufferBitmap, 0, 0, _bufferBitmap.getWidth(), _bufferBitmap.getHeight(), _rotateMatrix, true);
                 int rotateTransX = rotateBitmap.getWidth() / 2 - viewCenterX;
                 int rotateTransY = rotateBitmap.getHeight() / 2 - viewCenterY;
 
                 canvas.drawBitmap(rotateBitmap, -rotateTransX - 200, -rotateTransY - 200, null);
             }
             else {
-                canvas.drawBitmap(bufferBitmap, -200, -200, null);
+                canvas.drawBitmap(_bufferBitmap, -200, -200, null);
             }
 
             int cnt = 0;
@@ -444,9 +473,8 @@ public class MainActivity extends AppCompatActivity
                 LivestockInfo info = _livestockInfoMap.get(key);
 
                 Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
-                float distance[] = new float[2];
-                Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), distance);
-                String name = "[" + info.source() + "]" + Float.toString((float) Math.round(distance[0]) / 1000) + "km";
+                Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), _distance);
+                String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
 
                 float dx = (float) (x / 2) - (float) (point.first * _scale);
                 float dy = (float) (y / 2) + (float) (point.second * _scale);
@@ -457,26 +485,26 @@ public class MainActivity extends AppCompatActivity
                 cnt = (cnt + 1) % 4;
                 switch (cnt) {
                     case 0:
-                        paint.setColor(Color.BLUE);
-                        canvas.drawText("Last time: [" + info.source() + "]" + info.timestamp(), _centerX + 40, _centerY + 40, paint);
+                        _paint.setColor(Color.BLUE);
+                        canvas.drawText("Last time: [" + info.source() + "]" + info.timestamp(), _centerX + 40, _centerY + 40, _paint);
                         break;
                     case 1:
-                        paint.setColor(Color.MAGENTA);
-                        canvas.drawText("Last time: [" + info.source() + "]" + info.timestamp(), _centerX + 40, _centerY + 80, paint);
+                        _paint.setColor(Color.MAGENTA);
+                        canvas.drawText("Last time: [" + info.source() + "]" + info.timestamp(), _centerX + 40, _centerY + 80, _paint);
                         break;
                     case 2:
-                        paint.setColor(Color.BLACK);
-                        canvas.drawText("Last time: [" + info.source() + "]" + info.timestamp(), _centerX + 40, _centerY + 120, paint);
+                        _paint.setColor(Color.BLACK);
+                        canvas.drawText("Last time: [" + info.source() + "]" + info.timestamp(), _centerX + 40, _centerY + 120, _paint);
                         break;
                     case 3:
-                        paint.setColor(Color.GRAY);
-                        canvas.drawText("Last time: [" + info.source() + "]" + info.timestamp(), _centerX + 40, _centerY + 160, paint);
+                        _paint.setColor(Color.GRAY);
+                        canvas.drawText("Last time: [" + info.source() + "]" + info.timestamp(), _centerX + 40, _centerY + 160, _paint);
                         break;
                     default:
                         break;
                 }
 
-                canvas.drawText(name, _centerX + dx + 40, _centerY + dy, paint);
+                canvas.drawText(name, _centerX + dx + 40, _centerY + dy, _paint);
             }
         }
 
