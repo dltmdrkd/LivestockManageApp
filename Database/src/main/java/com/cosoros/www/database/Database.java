@@ -24,7 +24,7 @@ import java.util.TreeSet;
 public class Database extends SQLiteOpenHelper {
 
     private static Database mInstance = null;
-    private static final int _DATABASE_VERSION = 1;
+    private static final int _DATABASE_VERSION = 2;
     private static final String _DB_NAME = "nomad_lwd.db";
     private static final DBTable _table = new DBTable();
     private SimpleDateFormat _dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
@@ -129,47 +129,73 @@ public class Database extends SQLiteOpenHelper {
         Log.d("DATABASE", "DB INSERT DONE");
     }
 
-    public void insertSample(String repeater) {
+    public void insertSample(String sample) {
         SQLiteDatabase db = this.getWritableDatabase();
 
-        ContentValues values = new ContentValues();
+        switch(sample) {
+            case "1":
+                // jvil
+                ContentValues values = new ContentValues();
+                values.put(_table._lwdHistory._lwd_id, "A504");
+                values.put(_table._lwdHistory._ls_id, "A0001M");
+                values.put(_table._lwdHistory._data_origin, "[0042A504A50FA0047.996964^0107.584976^1581.30^10^20180404^010043^07.20^]");
+                values.put(_table._lwdHistory._data_latitude, "37.308690");
+                values.put(_table._lwdHistory._data_longitude, "126.992449");
+                values.put(_table._lwdHistory._data_altitude, "150.10");
+                values.put(_table._lwdHistory._data_satellite_cnt, "8");
+                values.put(_table._lwdHistory._data_time, "20180518100113");
+                values.put(_table._lwdHistory._data_battery, "7.19999980926514");
+                values.put(_table._lwdHistory._data_repeater, "0000");
+                values.put(_table._lwdHistory._user_latitude, "37.302443");
+                values.put(_table._lwdHistory._user_longitude, "127.014329");
 
-        values.put(_table._lwdHistory._lwd_id, "A504");
-        values.put(_table._lwdHistory._ls_id, "A0001M");
-        values.put(_table._lwdHistory._data_origin, "[0042A504A50FA0047.996964^0107.584976^1581.30^10^20180404^010043^07.20^]");
-        values.put(_table._lwdHistory._data_latitude, "37.308690");
-        values.put(_table._lwdHistory._data_longitude, "126.992449");
-        values.put(_table._lwdHistory._data_altitude, "150.10");
-        values.put(_table._lwdHistory._data_satellite_cnt, "8");
-        values.put(_table._lwdHistory._data_time, "20180404015923");
-        values.put(_table._lwdHistory._data_battery, "7.19999980926514");
-        values.put(_table._lwdHistory._data_repeater, repeater);
-        values.put(_table._lwdHistory._user_latitude, "37.302443");
-        values.put(_table._lwdHistory._user_longitude, "127.014329");
+                db.insert(_table._lwdHistory._table_name, null, values);
+                break;
+            case "2":
+                // sung univ 37.293615, 126.975098
+                ContentValues values2 = new ContentValues();
+                values2.put(_table._lwdHistory._lwd_id, "A502");
+                values2.put(_table._lwdHistory._ls_id, "A0001M");
+                values2.put(_table._lwdHistory._data_origin, "[0042A504A50FA0047.996964^0107.584976^1581.30^10^20180404^010043^07.20^]");
+                values2.put(_table._lwdHistory._data_latitude, "37.293615");
+                values2.put(_table._lwdHistory._data_longitude, "126.975098");
+                values2.put(_table._lwdHistory._data_altitude, "150.10");
+                values2.put(_table._lwdHistory._data_satellite_cnt, "8");
+                values2.put(_table._lwdHistory._data_time, "20180518101113");
+                values2.put(_table._lwdHistory._data_battery, "7.19999980926514");
+                values2.put(_table._lwdHistory._data_repeater, "0000");
+                values2.put(_table._lwdHistory._user_latitude, "37.302443");
+                values2.put(_table._lwdHistory._user_longitude, "127.014329");
 
-        db.insert(_table._lwdHistory._table_name, null, values);
+                db.insert(_table._lwdHistory._table_name, null, values2);
+                break;
+            case "3":
+                // samsung
+                ContentValues values3 = new ContentValues();
+                values3.put(_table._lwdHistory._lwd_id, "A505");
+                values3.put(_table._lwdHistory._ls_id, "A0001M");
+                values3.put(_table._lwdHistory._data_origin, "[0042A504A50FA0047.996964^0107.584976^1581.30^10^20180404^010043^07.20^]");
+                values3.put(_table._lwdHistory._data_latitude, "37.253930");
+                values3.put(_table._lwdHistory._data_longitude, "127.048457");
+                values3.put(_table._lwdHistory._data_altitude, "150.10");
+                values3.put(_table._lwdHistory._data_satellite_cnt, "8");
+                values3.put(_table._lwdHistory._data_time, "20180518102013");
+                values3.put(_table._lwdHistory._data_battery, "7.19999980926514");
+                values3.put(_table._lwdHistory._data_repeater, "0000");
+                values3.put(_table._lwdHistory._user_latitude, "37.302443");
+                values3.put(_table._lwdHistory._user_longitude, "127.014329");
 
-//        ContentValues values2 = new ContentValues();
-//
-//        values2.put(_table._lwdHistory._lwd_id, "A502");
-//        values2.put(_table._lwdHistory._ls_id, "A0001M");
-//        values2.put(_table._lwdHistory._data_origin, "[0042A504A50FA0047.996964^0107.584976^1581.30^10^20180404^010043^07.20^]");
-//        values2.put(_table._lwdHistory._data_latitude, "37.283029");
-//        values2.put(_table._lwdHistory._data_longitude, "127.045149");
-//        values2.put(_table._lwdHistory._data_altitude, "150.10");
-//        values2.put(_table._lwdHistory._data_satellite_cnt, "8");
-//        values2.put(_table._lwdHistory._data_time, "20180404015923");
-//        values2.put(_table._lwdHistory._data_battery, "7.19999980926514");
-//        values2.put(_table._lwdHistory._data_repeater, "0000");
-//        values2.put(_table._lwdHistory._user_latitude, "37.302443");
-//        values2.put(_table._lwdHistory._user_longitude, "127.014329");
-//
-//        db.insert(_table._lwdHistory._table_name, null, values2);
+                db.insert(_table._lwdHistory._table_name, null, values3);
+                break;
+            default:
+                break;
+        }
+
         db.close();
         Log.d("DATABASE", "DB-SAMPLE INSERT DONE");
     }
 
-    public JSONObject insertPin(int category, String pinName, double lat, double lon) throws JSONException {
+    public void insertPin(int category, String pinName, double lat, double lon) {
         SQLiteDatabase db = this.getWritableDatabase();
 
         ContentValues values = new ContentValues();
@@ -182,16 +208,9 @@ public class Database extends SQLiteOpenHelper {
         db.insert(_table._pinTable._table_name, null, values);
         db.close();
         Log.d("DATABASE", "DB-PIN INSERT DONE");
-
-        JSONObject dataDetail = new JSONObject();
-        dataDetail.put("category", category);
-        dataDetail.put("lat", lat);
-        dataDetail.put("lon", lon);
-
-        return dataDetail;
     }
 
-    public TreeSet<String> updatePin() {
+    public TreeSet<String> updatePinList() {
         SQLiteDatabase db = this.getReadableDatabase();
 
         TreeSet<String> pinKey = new TreeSet<>();
@@ -233,7 +252,7 @@ public class Database extends SQLiteOpenHelper {
         // read last data
         // if you want to change utc-time to local time : utc_time -> datetime(utc_time, 'localtime')
         String sql =
-                " SELECT lwd_id, data_latitude, data_longitude, data_altitude, utc_time " +
+                " SELECT lwd_id, data_latitude, data_longitude, data_altitude, datetime(utc_time, 'localtime') local_time " +
                 " FROM lwd_history a, " +
                 "      (SELECT lwd_id id, MAX(utc_time) time " +
                 "       FROM lwd_history" +
@@ -279,11 +298,11 @@ public class Database extends SQLiteOpenHelper {
                 String pin_name;
                 JSONObject dataDetail = new JSONObject();
 
-                pin_name = cursor.getString(i++);
-                pinKey.put(pin_name);
                 dataDetail.put("category", cursor.getString(i++));
+                pin_name = cursor.getString(i++);
                 dataDetail.put("lat", cursor.getString(i++));
                 dataDetail.put("lon", cursor.getString(i));
+                pinKey.put(pin_name);
                 pinData.put(pin_name, dataDetail);
 
             } while (cursor.moveToNext());
@@ -305,7 +324,7 @@ public class Database extends SQLiteOpenHelper {
 
         String sql
                 = " SELECT " +
-                "     utc_time, lwd_id, " +
+                "     datetime(utc_time, 'localtime') local_time, lwd_id, " +
                 "     (case data_repeater " +
                 "           when '0000' then '-' " +
                 "           else data_repeater " +

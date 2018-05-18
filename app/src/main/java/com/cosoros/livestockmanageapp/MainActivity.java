@@ -11,6 +11,8 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Rect;
+import android.graphics.RectF;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -56,12 +58,10 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.TreeSet;
 
-enum DrawingType {
-    DRAW_DEFAULT, DRAW_DIRECTION;
-}
 enum RunType {
     APP_START, APP_SLEEP
 }
@@ -71,11 +71,12 @@ public class MainActivity extends AppCompatActivity
 
     private int _state = BluetoothService.STATE_NONE;
     private String _receiveBuffer = "";
-    private DrawingType _drawingMode = DrawingType.DRAW_DEFAULT;
     private RunType _runMode = RunType.APP_START;
     private Pair<Double, Double> _myGpsLocation = new Pair<>(37.30362, 126.99712);
-    private Pair<Double, Double> _myLastGpsLocation = new Pair<>(37.30362, 126.99712);
     private HashMap<String, LivestockInfo> _livestockInfoMap = new HashMap<>();
+    private HashMap<String, Integer> _livestockInfoMapColor = new HashMap<>();
+    private int colorSet[] = { Color.MAGENTA, Color.BLUE, Color.GRAY, Color.DKGRAY, Color.CYAN, Color.GREEN };
+    private HashMap<String, PinInfo> _pinInfoMap = new HashMap<>();
     private CheckerThread _checkerThread;
     private ParserThread _parserThread;
     private Database _dataBase;
@@ -149,11 +150,8 @@ public class MainActivity extends AppCompatActivity
 
         public void onLocationChanged(Location location) {
             synchronized (_myGpsLocation) {
-                _myLastGpsLocation = _myGpsLocation;
                 _myGpsLocation = Pair.create(location.getLatitude(), location.getLongitude());
 
-                _drawingMode = DrawingType.DRAW_DIRECTION;
-                _mapView.invalidate();
             }
         }
 
@@ -334,11 +332,11 @@ public class MainActivity extends AppCompatActivity
                 if (data.isEmpty() != true) {
                     LivestockInfo info = Parser.parse(data);
                     synchronized (_livestockInfoMap) {
-                        _livestockInfoMap.put(info.source(), info);
-                        _mapView.invalidate();
-
-                        _drawingMode = DrawingType.DRAW_DEFAULT;
                         _dataBase.insert("lwd_history", data, info, _myGpsLocation);
+
+                        _livestockInfoMap.put(info.source(), info);
+                        _livestockInfoMapColor.put(info.source(), colorSet[_livestockInfoMap.size() - 1]);
+                        _mapView.invalidate();
                     }
                 }
             }
@@ -364,6 +362,8 @@ public class MainActivity extends AppCompatActivity
         private Matrix _rotateMatrix;
         private Paint _paint;
         private float[] _distance;
+        private RectF _rect;
+        private Path _triPath, _pinPath;
 
         //private Bitmap sun_image;
         public MapView(Context c) {
@@ -374,6 +374,9 @@ public class MainActivity extends AppCompatActivity
             _rotateMatrix = new Matrix();
             _paint = new Paint();
             _distance = new float[1];
+            _rect = new RectF();
+            _triPath = new Path();
+            _pinPath = new Path();
         }
 
         @Override
@@ -381,21 +384,20 @@ public class MainActivity extends AppCompatActivity
             super.onDraw(canvas);
 
             if (_bufferBitmap == null) {
-                _bufferBitmap = Bitmap.createBitmap(canvas.getWidth() + 400, canvas.getHeight() + 400, Bitmap.Config.ARGB_8888);
+                _bufferBitmap = Bitmap.createBitmap(canvas.getWidth(), canvas.getHeight(), Bitmap.Config.ARGB_8888);
             }
             _bufferBitmap.eraseColor(Color.TRANSPARENT);
             _bufferCanvas.setBitmap(_bufferBitmap);
             int x = getWidth();
             int y = getHeight();
-            int viewCenterX = _centerX + x / 2 + 200;
-            int viewCenterY = _centerY + y / 2 + 200;
-
+            int viewCenterX = _centerX + x / 2;
+            int viewCenterY = _centerY + y / 2;
 
             // draw axis and circles.
             _paint.setStyle(Paint.Style.STROKE);
             _paint.setColor(Color.BLACK);
-            _bufferCanvas.drawLine(0, viewCenterY, x + 400, viewCenterY, _paint);
-            _bufferCanvas.drawLine(viewCenterX, 0, viewCenterX, y + 400, _paint);
+            _bufferCanvas.drawLine(0, viewCenterY, x, viewCenterY, _paint);
+            _bufferCanvas.drawLine(viewCenterX, 0, viewCenterX, y, _paint);
 
             for (int i = 0; i < 5; ++i) {
                 _bufferCanvas.drawCircle(viewCenterX, viewCenterY, (i + 1) * _scale * 2.5f, _paint);
@@ -409,120 +411,77 @@ public class MainActivity extends AppCompatActivity
 
             if (_rotateRequested) {
                 // draw triangle
-                Path path = new Path();
                 int triLength = 20;
 
-                path.moveTo(viewCenterX - (triLength / 2), viewCenterY - 17);
-                path.lineTo(viewCenterX + (triLength / 2), viewCenterY - 17);
-                path.lineTo(viewCenterX, viewCenterY - 17 - 17);
-                path.close();
+                _triPath.moveTo(viewCenterX - (triLength / 2), viewCenterY - 17);
+                _triPath.lineTo(viewCenterX + (triLength / 2), viewCenterY - 17);
+                _triPath.lineTo(viewCenterX, viewCenterY - 17 - 17);
+                _triPath.close();
 
                 _bufferCanvas.save();
                 _bufferCanvas.rotate(_azimuth, viewCenterX, viewCenterY);
-                _bufferCanvas.drawPath(path, _paint);
+                _bufferCanvas.drawPath(_triPath, _paint);
                 _bufferCanvas.restore();
             }
 
-            if (_runMode == RunType.APP_START) {
-                JSONObject lastData;
-                JSONArray key, pinKey;
-                JSONObject data, pinData;
-
-                try {
-                    lastData = _dataBase.readLast();
-                    key = lastData.getJSONArray("key");
-                    data = lastData.getJSONObject("data");
-
-                    for (int i = 0; i < key.length(); i++) {
-                        String lwd_id;
-                        JSONObject dataDetail;
-
-                        lwd_id = key.getString(i);
-                        dataDetail = data.getJSONObject(lwd_id);
-                        _livestockInfoMap.put(lwd_id, Parser.parse(lwd_id, dataDetail));
-                    }
-
-                    pinKey = lastData.getJSONArray("pinKey");
-                    pinData = lastData.getJSONObject("pinData");
-
-                    for (int i = 0; i < pinKey.length(); i++) {
-                        String pin_name;
-                        JSONObject dataDetail;
-
-                        pin_name = pinKey.getString(i);
-                        dataDetail = pinData.getJSONObject(pin_name);
-
-                        _pinKey.add(pin_name);
-                        _livestockInfoMap.put(pin_name, Parser.parse(dataDetail.getString("name"), dataDetail, true));
-                    }
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-
-                _runMode = RunType.APP_SLEEP;
-            }
-
+            // draw receivers` location
             for (String key : _livestockInfoMap.keySet()) {
                 LivestockInfo info = _livestockInfoMap.get(key);
                 Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
 
-                float dx = (float) (x / 2) - (float) (point.first * _scale);
-                float dy = (float) (y / 2) + (float) (point.second * _scale);
-
-                _bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, _paint);
-            }
-
-//            if (_rotateRequested) {
-//                _rotateMatrix.reset();
-//                _rotateMatrix.postRotate(-_azimuth, viewCenterX, viewCenterY);
-//                Bitmap rotateBitmap = Bitmap.createBitmap(_bufferBitmap, 0, 0, _bufferBitmap.getWidth(), _bufferBitmap.getHeight(), _rotateMatrix, true);
-//                int rotateTransX = rotateBitmap.getWidth() / 2 - viewCenterX;
-//                int rotateTransY = rotateBitmap.getHeight() / 2 - viewCenterY;
-//
-//                canvas.drawBitmap(rotateBitmap, -rotateTransX - 200, -rotateTransY - 200, null);
-//            }
-//            else {
-            canvas.drawBitmap(_bufferBitmap, -200, -200, null);
-//            }
-
-            int cnt = 0;
-            for (String key : _livestockInfoMap.keySet()) {
-                LivestockInfo info = _livestockInfoMap.get(key);
-
-                Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
                 Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), _distance);
                 String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
 
                 float dx = (float) (x / 2) - (float) (point.first * _scale);
                 float dy = (float) (y / 2) + (float) (point.second * _scale);
 
-//                String angle = "[Angle]" + Integer.toString(Math.round(distance[1]));
-//                canvas.drawText(angle, _centerX + dx + 40, _centerY + dy + 40 , paint);
+                long timeDiff = (System.currentTimeMillis() - info.timestamp().getTime()) / (1000 * 60);    // ms * 1000 * 60 = min
 
-                cnt = (cnt + 1) % 4;
-                switch (cnt) {
-                    case 0:
-                        _paint.setColor(Color.BLUE);
-                        canvas.drawText("Last time: [" + info.source() + "]" + info.timestamp(), _centerX + 40, _centerY + 40, _paint);
+                _paint.setColor(_livestockInfoMapColor.get(key));
+                _bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, _paint);
+                _bufferCanvas.drawText(name, _centerX + dx + 30, _centerY + dy, _paint);
+                _bufferCanvas.drawText(String.format("%d Minute(s) ago", timeDiff), _centerX + dx + 30, _centerY + dy + 35, _paint);
+            }
+
+            // draw pin
+            _paint.setColor(Color.BLACK);
+            for (String key : _pinInfoMap.keySet()) {
+                PinInfo info = _pinInfoMap.get(key);
+                Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.pinLat(), info.pinLon()));
+
+                Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.pinLat(), info.pinLon(), _distance);
+                String name = "<" + info.pinName() + ">" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
+
+                float dx = (float) (x / 2) - (float) (point.first * _scale);
+                float dy = (float) (y / 2) + (float) (point.second * _scale);
+                int width = 15;
+
+                _rect.set(_centerX + dx - width, _centerY + dy - width, _centerX + dx + width, _centerY + dy + width);
+                switch(info.pinCategory()) {
+                    case 0: // home
+                        _bufferCanvas.drawRect(_rect, _paint);
                         break;
-                    case 1:
-                        _paint.setColor(Color.MAGENTA);
-                        canvas.drawText("Last time: [" + info.source() + "]" + info.timestamp(), _centerX + 40, _centerY + 80, _paint);
+                    case 1: // repeater
+                        _bufferCanvas.drawArc(_rect, 110, 320, true, _paint);
                         break;
-                    case 2:
-                        _paint.setColor(Color.BLACK);
-                        canvas.drawText("Last time: [" + info.source() + "]" + info.timestamp(), _centerX + 40, _centerY + 120, _paint);
-                        break;
-                    case 3:
-                        _paint.setColor(Color.GRAY);
-                        canvas.drawText("Last time: [" + info.source() + "]" + info.timestamp(), _centerX + 40, _centerY + 160, _paint);
+                    case 2: // etc
+                        // draw diamond
+                        _pinPath.moveTo(_centerX + dx, _centerY + dy - width);
+                        _pinPath.lineTo(_centerX + dx + width, _centerY + dy);
+                        _pinPath.lineTo(_centerX + dx, _centerY + dy + width);
+                        _pinPath.lineTo(_centerX + dx - width, _centerY + dy);
+                        _pinPath.close();
+
+                        _bufferCanvas.drawPath(_pinPath, _paint);
                         break;
                     default:
                         break;
                 }
-
-                canvas.drawText(name, _centerX + dx + 40, _centerY + dy, _paint);
+                _bufferCanvas.drawText(name, _centerX + dx + 30, _centerY + dy, _paint);
             }
+
+            canvas.drawBitmap(_bufferBitmap, 0, 0, null);
+
         }
 
         public boolean onTouchEvent(MotionEvent event) {
@@ -555,7 +514,7 @@ public class MainActivity extends AppCompatActivity
                     }
                     break;
                 }
-                case MotionEvent.ACTION_POINTER_DOWN: {// multi tocuh down.
+                case MotionEvent.ACTION_POINTER_DOWN: {// multi touch down.
                     _prevDistance = spacing(event);
                     _currentDistance = spacing(event);
                     mode = ZOOM;
@@ -569,7 +528,6 @@ public class MainActivity extends AppCompatActivity
                 }
             }
 
-            _drawingMode = DrawingType.DRAW_DEFAULT;
             invalidate();
             return true;
             //return super.onTouchEvent(event);
@@ -674,6 +632,59 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    private void setOpenTasks() {
+        this.readLast();
+        this.updatePinList();
+    }
+
+    private void updatePinList() {
+        _pinKey = _dataBase.updatePinList();
+    }
+
+    private void readLast() {
+        if (_runMode == RunType.APP_START) {
+            JSONObject lastData;
+            JSONArray key, pinKey;
+            JSONObject data, pinData;
+
+            try {
+                lastData = _dataBase.readLast();
+                key = lastData.getJSONArray("key");
+                data = lastData.getJSONObject("data");
+
+                for (int i = 0; i < key.length(); i++) {
+                    String lwd_id;
+                    JSONObject dataDetail;
+
+                    lwd_id = key.getString(i);
+                    dataDetail = data.getJSONObject(lwd_id);
+                    _livestockInfoMap.put(lwd_id, Parser.parse(lwd_id, dataDetail));
+                    _livestockInfoMapColor.put(lwd_id, colorSet[_livestockInfoMap.size() - 1]);
+                }
+
+                pinKey = lastData.getJSONArray("pinKey");
+                pinData = lastData.getJSONObject("pinData");
+
+                for (int i = 0; i < pinKey.length(); i++) {
+                    String pinName;
+                    JSONObject dataDetail;
+
+                    pinName = pinKey.getString(i);
+                    dataDetail = pinData.getJSONObject(pinName);
+
+                    _pinKey.add(pinName);
+
+                    _pinInfoMap.put(pinName, new PinInfo(dataDetail.getInt("category"), pinName,
+                                                         dataDetail.getDouble("lat"), dataDetail.getDouble("lon")));
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            _runMode = RunType.APP_SLEEP;
+        }
+    }
+
     private void pinSelectCategories() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         final CharSequence[] first = { "Home", "Repeater", "ETC" };
@@ -719,14 +730,14 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void addPin(int category, String name) throws JSONException {
-        JSONObject dataDetail = _dataBase.insertPin(category, name, _myGpsLocation.first, _myGpsLocation.second);
+        _dataBase.insertPin(category, name, _myGpsLocation.first, _myGpsLocation.second);
         _pinKey.add(name);
-        _livestockInfoMap.put(name, Parser.parse(name, dataDetail, true));
+        _pinInfoMap.put(name, new PinInfo(category, name, _myGpsLocation.first, _myGpsLocation.second));
         _mapView.invalidate();
     }
 
     private void pinSelectRemove() {
-        final CharSequence[] pinList, pinKeyBackup;
+        final CharSequence[] pinList;
         pinList = _pinKey.toArray(new CharSequence[_pinKey.size()]);
         final ArrayList checkedPin = new ArrayList();
 
@@ -750,7 +761,7 @@ public class MainActivity extends AppCompatActivity
 
                         for(int i = 0; i < checkedPin.size(); i++) {
                             _pinKey.remove(checkedPin.get(i));
-                            _livestockInfoMap.remove(checkedPin.get(i));
+                            _pinInfoMap.remove(checkedPin.get(i));
                         }
 
                         deletePin(checkedPin);
@@ -772,10 +783,13 @@ public class MainActivity extends AppCompatActivity
         _mapView.invalidate();
     }
 
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         _dataBase = Database.getInstance(this);
+//        _dataBase.insertSample("1");
 
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -828,6 +842,7 @@ public class MainActivity extends AppCompatActivity
         _magneticListener = new MagneticSensorListener();
         _checkerThread = new CheckerThread();
         _checkerThread.start();
+        setOpenTasks();
     }
 
     @Override
@@ -933,5 +948,23 @@ public class MainActivity extends AppCompatActivity
         manager.unregisterListener(_magneticListener);
         _azimuth = 0;
         _magneticListener.resetValues();
+    }
+
+    private class PinInfo {
+        final int _pinCategory;
+        final String _pinName;
+        final double _pinLat, _pinLon;
+
+        PinInfo(int category, String name, double lat, double lon) {
+            _pinCategory = category;
+            _pinName = name;
+            _pinLat = lat;
+            _pinLon = lon;
+        }
+
+        public int pinCategory() { return _pinCategory; }
+        public String pinName() { return _pinName; }
+        public double pinLat() { return _pinLat; }
+        public double pinLon() { return _pinLon; }
     }
 }
