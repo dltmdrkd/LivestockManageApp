@@ -189,6 +189,13 @@ public class MainActivity extends AppCompatActivity
             return sum / _azimuths.length;
         }
 
+        private void setAzimuthArray(float value, int exceptIndex) {
+            for (int i = 0; i < _azimuths.length; ++i) {
+                if (i == exceptIndex) continue;
+                _azimuths[i] = value;
+            }
+        }
+
         @Override
         public void onSensorChanged(SensorEvent event) {
             if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
@@ -205,6 +212,20 @@ public class MainActivity extends AppCompatActivity
                     float orientation[] = new float[3];
                     SensorManager.getOrientation(R, orientation);
                     float azimuth = (int)Math.toDegrees(orientation[0]);
+                    int previousIndex = _index - 1;
+                    if (previousIndex < 0) previousIndex = 7;
+
+                    if ((azimuth < 5 && azimuth > -5) != true &&
+                        (_azimuths[previousIndex] < 0 && azimuth > 0) ||
+                        (_azimuths[previousIndex] > 0 && azimuth < 0)) {
+                        setAzimuthArray(azimuth, _index);
+                    }
+//                    if (azimuth >= -180 && azimuth < -170 ) {
+//                        setAzimuthArray(azimuth, _index);
+//                    }
+//                    else if (azimuth <= 180 && azimuth > 170) {
+//                        setAzimuthArray(azimuth, _index);
+//                    }
                     _azimuths[_index++] = azimuth;
                     if (_index == 8) _index = 0;
                     _azimuth = averageAzimuth();
@@ -277,6 +298,8 @@ public class MainActivity extends AppCompatActivity
                     }
                     else {
                         manager.unregisterListener(_magneticListener);
+                        _azimuth = 0;
+                        _magneticListener.resetValues();
                     }
                     _previous = _rotateRequested;
                 }
@@ -347,7 +370,6 @@ public class MainActivity extends AppCompatActivity
             super(c);
             //Resources r = c.getResources();
             //sun_image = BitmapFactory.decodeResource(r, R.drawable.sun);
-            //_bufferBitmap = createBitmap(getWidth() + 400, getHeight() + 400, Bitmap.Config.ARGB_8888);
             _bufferCanvas = new Canvas();
             _rotateMatrix = new Matrix();
             _paint = new Paint();
@@ -385,25 +407,20 @@ public class MainActivity extends AppCompatActivity
             _bufferCanvas.drawCircle(viewCenterX, viewCenterY, 15, _paint);
             _bufferCanvas.drawText("N", viewCenterX - 17, viewCenterY - _scale * 12.5f, _paint);
 
-            if (_drawingMode == DrawingType.DRAW_DIRECTION) {
-//                 draw my direction
-                float direction[] = new float[2];
-                Location.distanceBetween(_myLastGpsLocation.first, _myLastGpsLocation.second, _myGpsLocation.first, _myGpsLocation.second, direction);
-
+            if (_rotateRequested) {
                 // draw triangle
                 Path path = new Path();
                 int triLength = 20;
 
-                path.moveTo(viewCenterX - (triLength / 2), viewCenterY + 17);
-                path.lineTo(viewCenterX + (triLength / 2), viewCenterY + 17);
-                path.lineTo(viewCenterX, viewCenterY + 17 + 17);
+                path.moveTo(viewCenterX - (triLength / 2), viewCenterY - 17);
+                path.lineTo(viewCenterX + (triLength / 2), viewCenterY - 17);
+                path.lineTo(viewCenterX, viewCenterY - 17 - 17);
                 path.close();
 
                 _bufferCanvas.save();
-                _bufferCanvas.rotate(-direction[1], viewCenterX, viewCenterY);
+                _bufferCanvas.rotate(_azimuth, viewCenterX, viewCenterY);
                 _bufferCanvas.drawPath(path, _paint);
                 _bufferCanvas.restore();
-                _drawingMode = DrawingType.DRAW_DEFAULT;
             }
 
             if (_runMode == RunType.APP_START) {
@@ -455,18 +472,18 @@ public class MainActivity extends AppCompatActivity
                 _bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, _paint);
             }
 
-            if (_rotateRequested) {
-                _rotateMatrix.reset();
-                _rotateMatrix.postRotate(-_azimuth, viewCenterX, viewCenterY);
-                Bitmap rotateBitmap = Bitmap.createBitmap(_bufferBitmap, 0, 0, _bufferBitmap.getWidth(), _bufferBitmap.getHeight(), _rotateMatrix, true);
-                int rotateTransX = rotateBitmap.getWidth() / 2 - viewCenterX;
-                int rotateTransY = rotateBitmap.getHeight() / 2 - viewCenterY;
-
-                canvas.drawBitmap(rotateBitmap, -rotateTransX - 200, -rotateTransY - 200, null);
-            }
-            else {
-                canvas.drawBitmap(_bufferBitmap, -200, -200, null);
-            }
+//            if (_rotateRequested) {
+//                _rotateMatrix.reset();
+//                _rotateMatrix.postRotate(-_azimuth, viewCenterX, viewCenterY);
+//                Bitmap rotateBitmap = Bitmap.createBitmap(_bufferBitmap, 0, 0, _bufferBitmap.getWidth(), _bufferBitmap.getHeight(), _rotateMatrix, true);
+//                int rotateTransX = rotateBitmap.getWidth() / 2 - viewCenterX;
+//                int rotateTransY = rotateBitmap.getHeight() / 2 - viewCenterY;
+//
+//                canvas.drawBitmap(rotateBitmap, -rotateTransX - 200, -rotateTransY - 200, null);
+//            }
+//            else {
+            canvas.drawBitmap(_bufferBitmap, -200, -200, null);
+//            }
 
             int cnt = 0;
             for (String key : _livestockInfoMap.keySet()) {
@@ -764,22 +781,29 @@ public class MainActivity extends AppCompatActivity
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
+        FloatingActionButton fab_reset = (FloatingActionButton) findViewById(R.id.fab_reset);
+        fab_reset.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                _rotateRequested = !_rotateRequested;
-                String msg;
-                if (_rotateRequested) {
-                    _mapView.setCenter();
-                    msg = "Tracking North Requested";
-                }
-                else {
-                    _azimuth = 0;
-                    _mapView.setCenter();
-                    msg = "Tracking North Disabled";
-                }
-                Snackbar.make(view, msg, Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                _mapView.setCenter();
+            }
+        });
+
+        FloatingActionButton fab_rotate = (FloatingActionButton) findViewById(R.id.fab_rotate);
+        fab_rotate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+            _rotateRequested = !_rotateRequested;
+            String msg;
+            if (_rotateRequested) {
+                _mapView.setCenter();
+                msg = "Tracking North Requested";
+            }
+            else {
+                _mapView.setCenter();
+                msg = "Tracking North Disabled";
+            }
+            Snackbar.make(view, msg, Snackbar.LENGTH_LONG).setAction("Action", null).show();
             }
         });
 
@@ -907,5 +931,7 @@ public class MainActivity extends AppCompatActivity
         super.onPause();
         SensorManager manager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
         manager.unregisterListener(_magneticListener);
+        _azimuth = 0;
+        _magneticListener.resetValues();
     }
 }
