@@ -334,8 +334,11 @@ public class MainActivity extends AppCompatActivity
                     synchronized (_livestockInfoMap) {
                         _dataBase.insert("lwd_history", data, info, _myGpsLocation);
 
+//                        info = Parser.parse(info.source(), info);
                         _livestockInfoMap.put(info.source(), info);
-                        _livestockInfoMapColor.put(info.source(), colorSet[_livestockInfoMap.size() - 1]);
+                        if (!_livestockInfoMapColor.containsKey(info.source())) {
+                            _livestockInfoMapColor.put(info.source(), colorSet[_livestockInfoMap.size() - 1]);
+                        }
                         _mapView.invalidate();
                     }
                 }
@@ -413,6 +416,7 @@ public class MainActivity extends AppCompatActivity
                 // draw triangle
                 int triLength = 20;
 
+                _triPath.reset();
                 _triPath.moveTo(viewCenterX - (triLength / 2), viewCenterY - 17);
                 _triPath.lineTo(viewCenterX + (triLength / 2), viewCenterY - 17);
                 _triPath.lineTo(viewCenterX, viewCenterY - 17 - 17);
@@ -466,6 +470,7 @@ public class MainActivity extends AppCompatActivity
                         break;
                     case 2: // etc
                         // draw diamond
+                        _pinPath.reset();
                         _pinPath.moveTo(_centerX + dx, _centerY + dy - width);
                         _pinPath.lineTo(_centerX + dx + width, _centerY + dy);
                         _pinPath.lineTo(_centerX + dx, _centerY + dy + width);
