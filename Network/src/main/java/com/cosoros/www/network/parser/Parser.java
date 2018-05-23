@@ -10,6 +10,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.StringTokenizer;
+import java.util.TimeZone;
 
 /*
  * Created by dltmd on 3/16/2018.
@@ -92,6 +93,7 @@ public class Parser {
         int satelliteCount = Integer.parseInt(getString(tokens, DATAINDEX.CNTSAT));
         String datetimeStr = getString(tokens, DATAINDEX.DATE) + getString(tokens, DATAINDEX.TIME);
         SimpleDateFormat formatFromString = new SimpleDateFormat("yyyyMMddHHmmss");
+//        formatFromString.setTimeZone(TimeZone.getTimeZone("GMT"));
         Date datetime;
         try {
             datetime = formatFromString.parse(datetimeStr);
@@ -133,6 +135,11 @@ public class Parser {
         utcTime = dataDetail.getString("time");
 
         SimpleDateFormat formatFromString = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+//        utcTime = "20180523055833";
+//
+//        SimpleDateFormat formatFromString = new SimpleDateFormat("yyyyMMddHHmmss");
+
         Date datetime;
         try {
             datetime = formatFromString.parse(utcTime);
@@ -146,16 +153,10 @@ public class Parser {
         return info;
     }
 
-    public static LivestockInfo parse(String name, JSONObject dataDetail, boolean check) throws  JSONException {
-        LivestockInfo info = new LivestockInfo();
-        Double latitude, longitude;
-        String pinType;
+    public static LivestockInfo parse(String source, LivestockInfo info) {
+        Date time = new Date();
 
-        pinType = dataDetail.getString("category");
-        latitude = dataDetail.getDouble("lat");
-        longitude = dataDetail.getDouble("lon");
-
-        info.setValues(name, pinType, "", latitude, longitude, 0.0, 0,null, 0.0f, new Version(0, 0, 0), new Version(0, 0, 0));
+        info.setValues(info.source(), info.repeater(), info.destination(), info.latitude(), info.longitude(), info.altitude(), info.satelliteCount(), time, info.voltage(), info.hwVersion(), info.fwVersion());
         return info;
     }
 

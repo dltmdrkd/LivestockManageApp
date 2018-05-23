@@ -334,7 +334,7 @@ public class MainActivity extends AppCompatActivity
                     synchronized (_livestockInfoMap) {
                         _dataBase.insert("lwd_history", data, info, _myGpsLocation);
 
-//                        info = Parser.parse(info.source(), info);
+                        info = Parser.parse(info.source(), info);
                         _livestockInfoMap.put(info.source(), info);
                         if (!_livestockInfoMapColor.containsKey(info.source())) {
                             _livestockInfoMapColor.put(info.source(), colorSet[_livestockInfoMap.size() - 1]);
