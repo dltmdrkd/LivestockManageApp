@@ -520,8 +520,11 @@ public class MainActivity extends AppCompatActivity
                         _currentDistance = spacing(event);
                         if (_currentDistance - _prevDistance > 10) {
                             // zoom in.
-                            _scale += 5;
-                            if (_scale > 400) _scale = 400;
+                            if (_scale > 1000) _scale += 10;
+                            else if (_scale > 2000) _scale += 20;
+                            else  _scale += 5;
+
+                            if (_scale > 3000) _scale = 3000;
                         } else if (_prevDistance - _currentDistance > 10) {
                             // zoom out.
                             _scale -= 5;
@@ -644,6 +647,7 @@ public class MainActivity extends AppCompatActivity
         public void setCenter() {
             _centerX = 0;
             _centerY = 0;
+            _scale = 40;
             invalidate();
         }
     }
