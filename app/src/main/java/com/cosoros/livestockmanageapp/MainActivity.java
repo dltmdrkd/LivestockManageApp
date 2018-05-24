@@ -482,7 +482,7 @@ public class MainActivity extends AppCompatActivity
                     name = name + " / " + String.format("%d min", timeDiff);
                     _paint.setColor(_livestockInfoMapColor.get(key));
                     _bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, _paint);
-                    _bufferCanvas.drawText(name, _centerX + 30, _centerY + (40 * i++), _paint);
+                    _bufferCanvas.drawText(name, 20, 40 * i++, _paint);
                 }
 
                 // draw repeaters
@@ -502,7 +502,7 @@ public class MainActivity extends AppCompatActivity
                     name = name + " / " + String.format("%d min", timeDiff);
                     _paint.setColor(_repeaterColor);
                     _bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, _paint);
-                    _bufferCanvas.drawText(name, _centerX + 30, _centerY + y - (40 * i++), _paint);
+                    _bufferCanvas.drawText(name, 20, y - (40 * i++), _paint);
                 }
             }
 
