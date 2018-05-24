@@ -117,8 +117,9 @@ public class Database extends SQLiteOpenHelper {
         values.put(_table._lwdHistory._user_latitude, userLocation.first);
         values.put(_table._lwdHistory._user_longitude, userLocation.second);
 
-//        if (info.repeat() != "0000") {
-//            values.put(_table._lwdHistory._data_repeat, info.repeat());
+        if (info.repeater() != "0000") {
+            values.put(_table._lwdHistory._data_repeater, info.repeater());
+        }
 
         values.put(_table._lwdHistory._data_time, _dateFormat.format(info.timestamp()));
         values.put(_table._lwdHistory._data_battery, info.voltage());
