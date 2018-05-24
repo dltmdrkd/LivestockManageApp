@@ -67,8 +67,10 @@ public class MainActivity extends AppCompatActivity
     private String _receiveBuffer = "";
     private Pair<Double, Double> _myGpsLocation = new Pair<>(37.30362, 126.99712);
     private HashMap<String, LivestockInfo> _livestockInfoMap = new HashMap<>();
+    private HashMap<String, LivestockInfo> _repeaterInfoMap = new HashMap<>();
     private HashMap<String, Integer> _livestockInfoMapColor = new HashMap<>();
-    private int colorSet[] = { Color.MAGENTA, Color.BLUE, Color.GRAY, Color.DKGRAY, Color.CYAN, Color.GREEN };
+    private int _colorSet[] = { Color.MAGENTA, Color.BLUE, Color.rgb(183, 226, 180), Color.rgb(102, 0, 51), Color.rgb(51, 153, 255), Color.GREEN };
+    private int _repeaterColor = Color.GRAY;
     private HashMap<String, PinInfo> _pinInfoMap = new HashMap<>();
     private CheckerThread _checkerThread;
     private ParserThread _parserThread;
@@ -79,13 +81,19 @@ public class MainActivity extends AppCompatActivity
     private float[] _geomagnetic;
     private float _azimuth, _pitch, _roll;
     private MagneticSensorListener _magneticListener;
+    private static final String _regex = ".{3}F";
     enum ROTATE_MODE {
         NONE,
         MAP_ROTATE,
         TRIANGLE_ROTATE,
     };
+    enum DRAW_MODE {
+        LIST_MODE,
+        MAP_MODE
+    };
 
     ROTATE_MODE _rotateMode = ROTATE_MODE.NONE;
+    DRAW_MODE _drawMode = DRAW_MODE.MAP_MODE;
 
     private void startLocationService() {
         // 위치 관리자 객체 참조
@@ -333,10 +341,16 @@ public class MainActivity extends AppCompatActivity
                     synchronized (_livestockInfoMap) {
                         _dataBase.insert("lwd_history", data, info, _myGpsLocation);
 
-                        _livestockInfoMap.put(info.source(), info);
-                        if (!_livestockInfoMapColor.containsKey(info.source())) {
-                            _livestockInfoMapColor.put(info.source(), colorSet[_livestockInfoMap.size() - 1]);
+                        if (info.source().matches(_regex)) {
+                            _repeaterInfoMap.put(info.source(), info);
+                        } else {
+                            _livestockInfoMap.put(info.source(), info);
+
+                            if (!_livestockInfoMapColor.containsKey(info.source())) {
+                                _livestockInfoMapColor.put(info.source(), _colorSet[_livestockInfoMap.size() - 1]);
+                            }
                         }
+
                         _mapView.invalidate();
                     }
                 }
@@ -410,23 +424,86 @@ public class MainActivity extends AppCompatActivity
             _bufferCanvas.drawCircle(viewCenterX, viewCenterY, 15, _paint);
             _bufferCanvas.drawText("N", viewCenterX - 17, viewCenterY - _scale * 12.5f, _paint);
 
-            // draw receivers` location
-            for (String key : _livestockInfoMap.keySet()) {
-                LivestockInfo info = _livestockInfoMap.get(key);
-                Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
+            // draw info on map
+            if (_drawMode == DRAW_MODE.MAP_MODE) {
+                // draw senders
+                for (String key : _livestockInfoMap.keySet()) {
+                    LivestockInfo info = _livestockInfoMap.get(key);
+                    Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
 
-                Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), _distance);
-                String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
+                    Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), _distance);
+                    String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
 
-                float dx = (float) (x / 2) - (float) (point.first * _scale);
-                float dy = (float) (y / 2) + (float) (point.second * _scale);
+                    float dx = (float) (x / 2) - (float) (point.first * _scale);
+                    float dy = (float) (y / 2) + (float) (point.second * _scale);
 
-                long timeDiff = (System.currentTimeMillis() - info.timestamp().getTime()) / (1000 * 60);    // ms * 1000 * 60 = min
+                    long timeDiff = (System.currentTimeMillis() - info.timestamp().getTime()) / (1000 * 60);    // ms * 1000 * 60 = min
 
-                _paint.setColor(_livestockInfoMapColor.get(key));
-                _bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, _paint);
-                _bufferCanvas.drawText(name, _centerX + dx + 30, _centerY + dy, _paint);
-                _bufferCanvas.drawText(String.format("%d Minute(s) ago", timeDiff), _centerX + dx + 30, _centerY + dy + 35, _paint);
+                    _paint.setColor(_livestockInfoMapColor.get(key));
+                    _bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, _paint);
+                    _bufferCanvas.drawText(name, _centerX + dx + 30, _centerY + dy, _paint);
+                    _bufferCanvas.drawText(String.format("%d Minute(s) ago", timeDiff), _centerX + dx + 30, _centerY + dy + 35, _paint);
+                }
+                // draw repeaters
+                for (String key : _repeaterInfoMap.keySet()) {
+                    LivestockInfo info = _repeaterInfoMap.get(key);
+                    Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
+
+                    Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), _distance);
+                    String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
+
+                    float dx = (float) (x / 2) - (float) (point.first * _scale);
+                    float dy = (float) (y / 2) + (float) (point.second * _scale);
+
+                    long timeDiff = (System.currentTimeMillis() - info.timestamp().getTime()) / (1000 * 60);    // ms * 1000 * 60 = min
+
+                    _paint.setColor(_repeaterColor);
+                    _bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, _paint);
+                    _bufferCanvas.drawText(name, _centerX + dx + 30, _centerY + dy, _paint);
+                    _bufferCanvas.drawText(String.format("%d Minute(s) ago", timeDiff), _centerX + dx + 30, _centerY + dy + 35, _paint);
+                }
+
+            // draw info as list
+            } else if (_drawMode == DRAW_MODE.LIST_MODE) {
+                // draw senders
+                int i = 1;
+                for (String key : _livestockInfoMap.keySet()) {
+                    LivestockInfo info = _livestockInfoMap.get(key);
+                    Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
+
+                    Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), _distance);
+                    String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
+
+                    float dx = (float) (x / 2) - (float) (point.first * _scale);
+                    float dy = (float) (y / 2) + (float) (point.second * _scale);
+
+                    long timeDiff = (System.currentTimeMillis() - info.timestamp().getTime()) / (1000 * 60);    // ms * 1000 * 60 = min
+
+                    name = name + " / " + String.format("%d min", timeDiff);
+                    _paint.setColor(_livestockInfoMapColor.get(key));
+                    _bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, _paint);
+                    _bufferCanvas.drawText(name, _centerX + 30, _centerY + (40 * i++), _paint);
+                }
+
+                // draw repeaters
+                i = 1;
+                for (String key : _repeaterInfoMap.keySet()) {
+                    LivestockInfo info = _repeaterInfoMap.get(key);
+                    Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
+
+                    Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), _distance);
+                    String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
+
+                    float dx = (float) (x / 2) - (float) (point.first * _scale);
+                    float dy = (float) (y / 2) + (float) (point.second * _scale);
+
+                    long timeDiff = (System.currentTimeMillis() - info.timestamp().getTime()) / (1000 * 60);    // ms * 1000 * 60 = min
+
+                    name = name + " / " + String.format("%d min", timeDiff);
+                    _paint.setColor(_repeaterColor);
+                    _bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, _paint);
+                    _bufferCanvas.drawText(name, _centerX + 30, _centerY + y - (40 * i++), _paint);
+                }
             }
 
             // draw pin
@@ -677,8 +754,12 @@ public class MainActivity extends AppCompatActivity
 
                 lwd_id = key.getString(i);
                 dataDetail = data.getJSONObject(lwd_id);
-                _livestockInfoMap.put(lwd_id, Parser.parse(lwd_id, dataDetail));
-                _livestockInfoMapColor.put(lwd_id, colorSet[_livestockInfoMap.size() - 1]);
+                if (lwd_id.matches(_regex)) {
+                    _repeaterInfoMap.put(lwd_id, Parser.parse(lwd_id, dataDetail));
+                } else {
+                    _livestockInfoMap.put(lwd_id, Parser.parse(lwd_id, dataDetail));
+                    _livestockInfoMapColor.put(lwd_id, _colorSet[_livestockInfoMap.size() - 1]);
+                }
             }
 
             pinKey = lastData.getJSONArray("pinKey");
@@ -805,7 +886,7 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         _dataBase = Database.getInstance(this);
-//        _dataBase.insertSample("1");
+//        _dataBase.insertSample("4");
 
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -892,6 +973,19 @@ public class MainActivity extends AppCompatActivity
         if (id == R.id.delete_pin) {
             pinSelectRemove();
         }
+
+        if (id == R.id.change_drawmode) {
+            switch(_drawMode) {
+                case MAP_MODE:
+                    _drawMode = DRAW_MODE.LIST_MODE;
+                    break;
+                case LIST_MODE:
+                    _drawMode = DRAW_MODE.MAP_MODE;
+                    break;
+            }
+            _mapView.invalidate();
+        }
+
 
         return super.onOptionsItemSelected(item);
     }

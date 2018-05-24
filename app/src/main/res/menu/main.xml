@@ -3,6 +3,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/change_drawmode"
+        android:icon="@drawable/outline_list_white_24"
+        android:title="Drawing Mode"
+        app:showAsAction="ifRoom" />
+
+    <item
         android:id="@+id/action_bluetooth"
         android:icon="@drawable/ic_bluetooth_disabled_white_24dp"
         android:title="Bluetooth State"
