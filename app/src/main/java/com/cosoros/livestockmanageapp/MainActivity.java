@@ -60,16 +60,11 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.TreeSet;
 
-enum RunType {
-    APP_START, APP_SLEEP
-}
-
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
     private int _state = BluetoothService.STATE_NONE;
     private String _receiveBuffer = "";
-    private RunType _runMode = RunType.APP_START;
     private Pair<Double, Double> _myGpsLocation = new Pair<>(37.30362, 126.99712);
     private HashMap<String, LivestockInfo> _livestockInfoMap = new HashMap<>();
     private HashMap<String, Integer> _livestockInfoMapColor = new HashMap<>();
@@ -644,46 +639,42 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void readLast() {
-        if (_runMode == RunType.APP_START) {
-            JSONObject lastData;
-            JSONArray key, pinKey;
-            JSONObject data, pinData;
+        JSONObject lastData;
+        JSONArray key, pinKey;
+        JSONObject data, pinData;
 
-            try {
-                lastData = _dataBase.readLast();
-                key = lastData.getJSONArray("key");
-                data = lastData.getJSONObject("data");
+        try {
+            lastData = _dataBase.readLast();
+            key = lastData.getJSONArray("key");
+            data = lastData.getJSONObject("data");
 
-                for (int i = 0; i < key.length(); i++) {
-                    String lwd_id;
-                    JSONObject dataDetail;
+            for (int i = 0; i < key.length(); i++) {
+                String lwd_id;
+                JSONObject dataDetail;
 
-                    lwd_id = key.getString(i);
-                    dataDetail = data.getJSONObject(lwd_id);
-                    _livestockInfoMap.put(lwd_id, Parser.parse(lwd_id, dataDetail));
-                    _livestockInfoMapColor.put(lwd_id, colorSet[_livestockInfoMap.size() - 1]);
-                }
-
-                pinKey = lastData.getJSONArray("pinKey");
-                pinData = lastData.getJSONObject("pinData");
-
-                for (int i = 0; i < pinKey.length(); i++) {
-                    String pinName;
-                    JSONObject dataDetail;
-
-                    pinName = pinKey.getString(i);
-                    dataDetail = pinData.getJSONObject(pinName);
-
-                    _pinKey.add(pinName);
-
-                    _pinInfoMap.put(pinName, new PinInfo(dataDetail.getInt("category"), pinName,
-                                                         dataDetail.getDouble("lat"), dataDetail.getDouble("lon")));
-                }
-            } catch (JSONException e) {
-                e.printStackTrace();
+                lwd_id = key.getString(i);
+                dataDetail = data.getJSONObject(lwd_id);
+                _livestockInfoMap.put(lwd_id, Parser.parse(lwd_id, dataDetail));
+                _livestockInfoMapColor.put(lwd_id, colorSet[_livestockInfoMap.size() - 1]);
             }
 
-            _runMode = RunType.APP_SLEEP;
+            pinKey = lastData.getJSONArray("pinKey");
+            pinData = lastData.getJSONObject("pinData");
+
+            for (int i = 0; i < pinKey.length(); i++) {
+                String pinName;
+                JSONObject dataDetail;
+
+                pinName = pinKey.getString(i);
+                dataDetail = pinData.getJSONObject(pinName);
+
+                _pinKey.add(pinName);
+
+                _pinInfoMap.put(pinName, new PinInfo(dataDetail.getInt("category"), pinName,
+                                                     dataDetail.getDouble("lat"), dataDetail.getDouble("lon")));
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
     }
 
