@@ -93,7 +93,7 @@ public class Parser {
         int satelliteCount = Integer.parseInt(getString(tokens, DATAINDEX.CNTSAT));
         String datetimeStr = getString(tokens, DATAINDEX.DATE) + getString(tokens, DATAINDEX.TIME);
         SimpleDateFormat formatFromString = new SimpleDateFormat("yyyyMMddHHmmss");
-//        formatFromString.setTimeZone(TimeZone.getTimeZone("GMT"));
+        formatFromString.setTimeZone(TimeZone.getTimeZone("GMT"));
         Date datetime;
         try {
             datetime = formatFromString.parse(datetimeStr);
@@ -136,10 +136,6 @@ public class Parser {
 
         SimpleDateFormat formatFromString = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-//        utcTime = "20180523055833";
-//
-//        SimpleDateFormat formatFromString = new SimpleDateFormat("yyyyMMddHHmmss");
-
         Date datetime;
         try {
             datetime = formatFromString.parse(utcTime);
@@ -152,12 +148,4 @@ public class Parser {
         info.setValues(source, "", "", latitude, longitude, altitude, 0, datetime, 0.0f, new Version(0,0,0), new Version(0,0,0));
         return info;
     }
-
-    public static LivestockInfo parse(String source, LivestockInfo info) {
-        Date time = new Date();
-
-        info.setValues(info.source(), info.repeater(), info.destination(), info.latitude(), info.longitude(), info.altitude(), info.satelliteCount(), time, info.voltage(), info.hwVersion(), info.fwVersion());
-        return info;
-    }
-
 }

@@ -11,7 +11,6 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.Rect;
 import android.graphics.RectF;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -58,7 +57,6 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.TreeSet;
 
@@ -334,7 +332,6 @@ public class MainActivity extends AppCompatActivity
                     synchronized (_livestockInfoMap) {
                         _dataBase.insert("lwd_history", data, info, _myGpsLocation);
 
-                        info = Parser.parse(info.source(), info);
                         _livestockInfoMap.put(info.source(), info);
                         if (!_livestockInfoMapColor.containsKey(info.source())) {
                             _livestockInfoMapColor.put(info.source(), colorSet[_livestockInfoMap.size() - 1]);
