@@ -5,6 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.location.Location;
 import android.util.Log;
 import android.util.Pair;
 
@@ -17,6 +18,7 @@ import org.json.JSONObject;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.TimeZone;
 import java.util.TreeSet;
 
@@ -135,13 +137,14 @@ public class Database extends SQLiteOpenHelper {
 
         switch(sample) {
             case "1":
-                // jvil
+                // jvil 37.303696, 126.996927
+                // 37.304708, 126.996527
                 ContentValues values = new ContentValues();
-                values.put(_table._lwdHistory._lwd_id, "A504");
+                values.put(_table._lwdHistory._lwd_id, "0103");
                 values.put(_table._lwdHistory._ls_id, "A0001M");
                 values.put(_table._lwdHistory._data_origin, "[0042A504A50FA0047.996964^0107.584976^1581.30^10^20180404^010043^07.20^]");
-                values.put(_table._lwdHistory._data_latitude, "37.308690");
-                values.put(_table._lwdHistory._data_longitude, "126.992449");
+                values.put(_table._lwdHistory._data_latitude, "37.303696");
+                values.put(_table._lwdHistory._data_longitude, "126.996927");
                 values.put(_table._lwdHistory._data_altitude, "150.10");
                 values.put(_table._lwdHistory._data_satellite_cnt, "8");
                 values.put(_table._lwdHistory._data_time, "20180518100113");
@@ -154,12 +157,13 @@ public class Database extends SQLiteOpenHelper {
                 break;
             case "2":
                 // sung univ 37.293615, 126.975098
+                // jungja station 37.366017, 127.108069
                 ContentValues values2 = new ContentValues();
-                values2.put(_table._lwdHistory._lwd_id, "A502");
+                values2.put(_table._lwdHistory._lwd_id, "A30F");
                 values2.put(_table._lwdHistory._ls_id, "A0001M");
                 values2.put(_table._lwdHistory._data_origin, "[0042A504A50FA0047.996964^0107.584976^1581.30^10^20180404^010043^07.20^]");
-                values2.put(_table._lwdHistory._data_latitude, "37.293615");
-                values2.put(_table._lwdHistory._data_longitude, "126.975098");
+                values2.put(_table._lwdHistory._data_latitude, "37.366017");
+                values2.put(_table._lwdHistory._data_longitude, "127.108069");
                 values2.put(_table._lwdHistory._data_altitude, "150.10");
                 values2.put(_table._lwdHistory._data_satellite_cnt, "8");
                 values2.put(_table._lwdHistory._data_time, "20180518101113");
@@ -173,7 +177,7 @@ public class Database extends SQLiteOpenHelper {
             case "3":
                 // samsung
                 ContentValues values3 = new ContentValues();
-                values3.put(_table._lwdHistory._lwd_id, "A505");
+                values3.put(_table._lwdHistory._lwd_id, "A40F");
                 values3.put(_table._lwdHistory._ls_id, "A0001M");
                 values3.put(_table._lwdHistory._data_origin, "[0042A504A50FA0047.996964^0107.584976^1581.30^10^20180404^010043^07.20^]");
                 values3.put(_table._lwdHistory._data_latitude, "37.253930");
@@ -188,6 +192,30 @@ public class Database extends SQLiteOpenHelper {
 
                 db.insert(_table._lwdHistory._table_name, null, values3);
                 break;
+            case "4":
+                String[] lwd_id = {"0102", "0103", "0104", "0105", "0106", "0107", "A30F", "A40F", "A50F"};
+                String[][] location = {{"37.308997", "126.993657"}, {"37.310771", "127.000538"}, {"37.302300", "127.014300"},
+                                       {"37.303887", "127.010159"}, {"37.305577", "127.014043"}, {"37.299791", "127.000460"},
+                                       {"37.293615", "126.975098"}, {"37.366017", "127.108069"}, {"37.253930", "127.048457"}};  // repeater x 3
+
+
+
+
+                String sql = "INSERT INTO lwd_history " +
+                                        "(lwd_id, ls_id, data_origin, data_latitude, data_longitude, data_altitude, data_satellite_cnt, data_time, data_battery, data_repeater, user_latitude, user_longitude) VALUES ";
+
+                for (int i = 0; i < lwd_id.length; i++) {
+                    sql = sql + " ('" + lwd_id[i] + "', 'A0001M', '[0042A504A50FA0047.996964^0107.584976^1581.30^10^20180404^010043^07.20^]', '"
+                              + location[i][0] + "', '" + location[i][1] + "',"
+                              + " '150.10', '8', '20180518102013', '7.19999980926514', '0000', '37.302443', '127.014329') ";
+                    if (i != lwd_id.length - 1) {
+                        sql = sql + ", ";
+                    }
+                }
+                sql = sql + "; ";
+
+                db.execSQL(sql);
+
             default:
                 break;
         }
@@ -399,6 +427,18 @@ public class Database extends SQLiteOpenHelper {
         readData.add(columnName);
         db.close();
         return readData;
+    }
+
+    class LocationInfo {
+        private double latitude;
+        private double longitude;
+
+        public double latitude() { return this.latitude; }
+        public double longitude() { return this.longitude; }
+        public void setLocation(double lat, double lon) {
+            this.latitude = lat;
+            this.longitude = lon;
+        }
     }
 }
 
