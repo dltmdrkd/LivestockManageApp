@@ -79,7 +79,13 @@ public class MainActivity extends AppCompatActivity
     private float[] _geomagnetic;
     private float _azimuth, _pitch, _roll;
     private MagneticSensorListener _magneticListener;
-    private boolean _rotateRequested = false;
+    enum ROTATE_MODE {
+        NONE,
+        MAP_ROTATE,
+        TRIANGLE_ROTATE,
+    };
+
+    ROTATE_MODE _rotateMode = ROTATE_MODE.NONE;
 
     private void startLocationService() {
         // 위치 관리자 객체 참조
@@ -277,22 +283,22 @@ public class MainActivity extends AppCompatActivity
     private class CheckerThread extends Thread {
 
         public void run() {
-            boolean _previous = false;
+            ROTATE_MODE _previous = ROTATE_MODE.NONE;
             while (true) {
-                if (_rotateRequested != _previous) {
+                if (_rotateMode != _previous) {
                     SensorManager manager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
-                    if (_rotateRequested) {
+                    if (_previous == ROTATE_MODE.NONE) {
                         Sensor magnet = manager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
                         Sensor accel = manager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
                         manager.registerListener(_magneticListener, magnet, SensorManager.SENSOR_DELAY_NORMAL);
                         manager.registerListener(_magneticListener, accel, SensorManager.SENSOR_DELAY_NORMAL);
                     }
-                    else {
+                    else if (_rotateMode == ROTATE_MODE.NONE){
                         manager.unregisterListener(_magneticListener);
                         _azimuth = 0;
                         _magneticListener.resetValues();
                     }
-                    _previous = _rotateRequested;
+                    _previous = _rotateMode;
                 }
             }
         }
@@ -404,22 +410,6 @@ public class MainActivity extends AppCompatActivity
             _bufferCanvas.drawCircle(viewCenterX, viewCenterY, 15, _paint);
             _bufferCanvas.drawText("N", viewCenterX - 17, viewCenterY - _scale * 12.5f, _paint);
 
-            if (_rotateRequested) {
-                // draw triangle
-                int triLength = 20;
-
-                _triPath.reset();
-                _triPath.moveTo(viewCenterX - (triLength / 2), viewCenterY - 17);
-                _triPath.lineTo(viewCenterX + (triLength / 2), viewCenterY - 17);
-                _triPath.lineTo(viewCenterX, viewCenterY - 17 - 17);
-                _triPath.close();
-
-                _bufferCanvas.save();
-                _bufferCanvas.rotate(_azimuth, viewCenterX, viewCenterY);
-                _bufferCanvas.drawPath(_triPath, _paint);
-                _bufferCanvas.restore();
-            }
-
             // draw receivers` location
             for (String key : _livestockInfoMap.keySet()) {
                 LivestockInfo info = _livestockInfoMap.get(key);
@@ -477,8 +467,37 @@ public class MainActivity extends AppCompatActivity
                 _bufferCanvas.drawText(name, _centerX + dx + 30, _centerY + dy, _paint);
             }
 
-            canvas.drawBitmap(_bufferBitmap, 0, 0, null);
+            if (_rotateMode == ROTATE_MODE.MAP_ROTATE) {
+                _rotateMatrix.reset();
+                _rotateMatrix.postRotate(-_azimuth, viewCenterX, viewCenterY);
+                Bitmap rotateBitmap = Bitmap.createBitmap(_bufferBitmap, 0, 0, _bufferBitmap.getWidth(), _bufferBitmap.getHeight(), _rotateMatrix, true);
+                int rotateTransX = rotateBitmap.getWidth() / 2 - viewCenterX;
+                int rotateTransY = rotateBitmap.getHeight() / 2 - viewCenterY;
 
+                canvas.drawBitmap(rotateBitmap, -rotateTransX, -rotateTransY, null);
+            }
+            else {
+                canvas.drawBitmap(_bufferBitmap, 0, 0, null);
+            }
+
+            if (_rotateMode != ROTATE_MODE.NONE) {
+                // draw triangle
+                int triLength = 24;
+
+                _triPath.reset();
+                _triPath.moveTo(viewCenterX - (triLength / 2), viewCenterY - (int)(Math.sqrt(3) * (triLength / 2)));
+                _triPath.lineTo(viewCenterX + (triLength / 2), viewCenterY - (int)(Math.sqrt(3) * (triLength / 2)));
+                _triPath.lineTo(viewCenterX, viewCenterY - (int)(Math.sqrt(3) * triLength));
+                _triPath.close();
+
+                canvas.save();
+                if (_rotateMode == ROTATE_MODE.TRIANGLE_ROTATE) {
+                    canvas.rotate(_azimuth, viewCenterX, viewCenterY);
+                }
+                _paint.setColor(Color.RED);
+                canvas.drawPath(_triPath, _paint);
+                canvas.restore();
+            }
         }
 
         public boolean onTouchEvent(MotionEvent event) {
@@ -491,7 +510,7 @@ public class MainActivity extends AppCompatActivity
                     break;
                 }
                 case MotionEvent.ACTION_MOVE: {// touch move.
-                    if (mode == DRAG && _rotateRequested != true) {
+                    if (mode == DRAG && _rotateMode == ROTATE_MODE.NONE) {
                         _centerX -= _dragPrevX - (int) event.getX();
                         _centerY -= _dragPrevY - (int) event.getY();
                         _dragPrevX = (int) event.getX();
@@ -800,15 +819,15 @@ public class MainActivity extends AppCompatActivity
         fab_rotate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-            _rotateRequested = !_rotateRequested;
-            String msg;
-            if (_rotateRequested) {
-                _mapView.setCenter();
-                msg = "Tracking North Requested";
-            }
-            else {
-                _mapView.setCenter();
-                msg = "Tracking North Disabled";
+
+            int index = (_rotateMode.ordinal() + 1 == ROTATE_MODE.values().length) ? 0 : _rotateMode.ordinal() + 1;
+            _rotateMode = ROTATE_MODE.values()[index];
+            String msg = "";
+            _mapView.setCenter();
+            switch (_rotateMode) {
+                case NONE: msg = "Compass Disabled"; break;
+                case MAP_ROTATE: msg = "Map Rotation Mode"; break;
+                case TRIANGLE_ROTATE: msg = "Triangle Rotation Mode"; break;
             }
             Snackbar.make(view, msg, Snackbar.LENGTH_LONG).setAction("Action", null).show();
             }
@@ -925,7 +944,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onResume() {
         super.onResume();
-        if (_rotateRequested) {
+        if (_rotateMode != ROTATE_MODE.NONE) {
             SensorManager manager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
             Sensor magnet = manager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
             Sensor accel = manager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
