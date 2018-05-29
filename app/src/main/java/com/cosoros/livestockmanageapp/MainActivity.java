@@ -82,6 +82,8 @@ public class MainActivity extends AppCompatActivity
     private float _azimuth, _pitch, _roll;
     private MagneticSensorListener _magneticListener;
     private static final String _regex = ".{3}F";
+    private boolean _exitRequested = false;
+
     enum ROTATE_MODE {
         NONE,
         MAP_ROTATE,
@@ -886,7 +888,7 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         _dataBase = Database.getInstance(this);
-//        _dataBase.insertSample("4");
+        _dataBase.insertSample("4");
 
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -947,8 +949,35 @@ public class MainActivity extends AppCompatActivity
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
-        } else {
+        }
+        else if (_exitRequested) {
+            _exitRequested = false;
             super.onBackPressed();
+        }
+        else {
+            DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    switch (which) {
+                        case DialogInterface.BUTTON_POSITIVE: {
+                            _exitRequested = true;
+                            onBackPressed();
+                            break;
+                        }
+                        case DialogInterface.BUTTON_NEGATIVE: {
+                            _exitRequested = false;
+                            break;
+                        }
+                    }
+                }
+            };
+
+            new AlertDialog.Builder(this)
+                    .setTitle("Close App")
+                    .setMessage("Are you sure you want to close application?")
+                    .setPositiveButton("Yes", listener)
+                    .setNegativeButton("No", listener)
+                    .show();
         }
     }
 
