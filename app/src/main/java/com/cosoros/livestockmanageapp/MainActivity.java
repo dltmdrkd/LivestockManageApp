@@ -83,6 +83,7 @@ public class MainActivity extends AppCompatActivity
     private MagneticSensorListener _magneticListener;
     private static final String _regex = ".{3}F";
     private boolean _exitRequested = false;
+    private static final int _mapSizeExtend = 500;
 
     enum ROTATE_MODE {
         NONE,
@@ -103,9 +104,9 @@ public class MainActivity extends AppCompatActivity
 
         // 위치 정보를 받을 리스너 생성
         GPSListener gpsListener = new GPSListener();
-        long minTime = 60 * 1000; // 60 seconds.
-        float minDistance = 5; // 5 meters.
-
+        long minTime = 5 * 1000; // 5 seconds.
+        float minDistance = 10.0f; // 10 meters.
+        // [Warning!] minTime && minDistance -> onLocationChanged called.
         try {
             // GPS를 이용한 위치 요청
             manager.requestLocationUpdates(
@@ -160,7 +161,8 @@ public class MainActivity extends AppCompatActivity
         public void onLocationChanged(Location location) {
             synchronized (_myGpsLocation) {
                 _myGpsLocation = Pair.create(location.getLatitude(), location.getLongitude());
-
+                //Toast.makeText(MainActivity.this, "[GPS Received]", Toast.LENGTH_SHORT).show();
+                _mapView.invalidate();
             }
         }
 
@@ -401,12 +403,12 @@ public class MainActivity extends AppCompatActivity
             super.onDraw(canvas);
 
             if (_bufferBitmap == null) {
-                _bufferBitmap = Bitmap.createBitmap(canvas.getWidth(), canvas.getHeight(), Bitmap.Config.ARGB_8888);
+                _bufferBitmap = Bitmap.createBitmap(canvas.getWidth() + _mapSizeExtend * 2, canvas.getHeight() + _mapSizeExtend * 2, Bitmap.Config.ARGB_8888);
             }
             _bufferBitmap.eraseColor(Color.TRANSPARENT);
             _bufferCanvas.setBitmap(_bufferBitmap);
-            int x = getWidth();
-            int y = getHeight();
+            int x = getWidth() + _mapSizeExtend * 2;
+            int y = getHeight() + _mapSizeExtend * 2;
             int viewCenterX = _centerX + x / 2;
             int viewCenterY = _centerY + y / 2;
 
@@ -427,84 +429,45 @@ public class MainActivity extends AppCompatActivity
             _bufferCanvas.drawText("N", viewCenterX - 17, viewCenterY - _scale * 12.5f, _paint);
 
             // draw info on map
-            if (_drawMode == DRAW_MODE.MAP_MODE) {
-                // draw senders
-                for (String key : _livestockInfoMap.keySet()) {
-                    LivestockInfo info = _livestockInfoMap.get(key);
-                    Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
+            for (String key : _livestockInfoMap.keySet()) {
+                LivestockInfo info = _livestockInfoMap.get(key);
+                Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
 
-                    Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), _distance);
-                    String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
+                Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), _distance);
+                String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
 
-                    float dx = (float) (x / 2) - (float) (point.first * _scale);
-                    float dy = (float) (y / 2) + (float) (point.second * _scale);
+                int dx = viewCenterX - (int)(point.first * _scale);
+                int dy = viewCenterY - (int)(point.second * _scale);
 
+                _paint.setColor(_livestockInfoMapColor.get(key));
+                _bufferCanvas.drawCircle(dx, dy, 15, _paint);
+
+                if (_drawMode == DRAW_MODE.MAP_MODE) {
                     long timeDiff = (System.currentTimeMillis() - info.timestamp().getTime()) / (1000 * 60);    // ms * 1000 * 60 = min
 
-                    _paint.setColor(_livestockInfoMapColor.get(key));
-                    _bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, _paint);
-                    _bufferCanvas.drawText(name, _centerX + dx + 30, _centerY + dy, _paint);
-                    _bufferCanvas.drawText(String.format("%d Minute(s) ago", timeDiff), _centerX + dx + 30, _centerY + dy + 35, _paint);
+                    _bufferCanvas.drawText(name, dx + 30, dy, _paint);
+                    _bufferCanvas.drawText(String.format("%d Minute(s) ago", timeDiff), dx + 30, dy + 35, _paint);
                 }
-                // draw repeaters
-                for (String key : _repeaterInfoMap.keySet()) {
-                    LivestockInfo info = _repeaterInfoMap.get(key);
-                    Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
+            }
+            // draw repeaters
+            for (String key : _repeaterInfoMap.keySet()) {
+                LivestockInfo info = _repeaterInfoMap.get(key);
+                Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
 
-                    Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), _distance);
-                    String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
+                Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), _distance);
+                String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
 
-                    float dx = (float) (x / 2) - (float) (point.first * _scale);
-                    float dy = (float) (y / 2) + (float) (point.second * _scale);
+                int dx = viewCenterX - (int)(point.first * _scale);
+                int dy = viewCenterY - (int)(point.second * _scale);
 
+                _paint.setColor(_repeaterColor);
+                _bufferCanvas.drawCircle(dx, dy, 15, _paint);
+
+                if (_drawMode == DRAW_MODE.MAP_MODE) {
                     long timeDiff = (System.currentTimeMillis() - info.timestamp().getTime()) / (1000 * 60);    // ms * 1000 * 60 = min
 
-                    _paint.setColor(_repeaterColor);
-                    _bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, _paint);
-                    _bufferCanvas.drawText(name, _centerX + dx + 30, _centerY + dy, _paint);
-                    _bufferCanvas.drawText(String.format("%d Minute(s) ago", timeDiff), _centerX + dx + 30, _centerY + dy + 35, _paint);
-                }
-
-            // draw info as list
-            } else if (_drawMode == DRAW_MODE.LIST_MODE) {
-                // draw senders
-                int i = 1;
-                for (String key : _livestockInfoMap.keySet()) {
-                    LivestockInfo info = _livestockInfoMap.get(key);
-                    Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
-
-                    Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), _distance);
-                    String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
-
-                    float dx = (float) (x / 2) - (float) (point.first * _scale);
-                    float dy = (float) (y / 2) + (float) (point.second * _scale);
-
-                    long timeDiff = (System.currentTimeMillis() - info.timestamp().getTime()) / (1000 * 60);    // ms * 1000 * 60 = min
-
-                    name = name + " / " + String.format("%d min", timeDiff);
-                    _paint.setColor(_livestockInfoMapColor.get(key));
-                    _bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, _paint);
-                    _bufferCanvas.drawText(name, 20, 40 * i++, _paint);
-                }
-
-                // draw repeaters
-                i = 1;
-                for (String key : _repeaterInfoMap.keySet()) {
-                    LivestockInfo info = _repeaterInfoMap.get(key);
-                    Pair<Double, Double> point = getRelativePoint(_myGpsLocation, Pair.create(info.latitude(), info.longitude()));
-
-                    Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), _distance);
-                    String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
-
-                    float dx = (float) (x / 2) - (float) (point.first * _scale);
-                    float dy = (float) (y / 2) + (float) (point.second * _scale);
-
-                    long timeDiff = (System.currentTimeMillis() - info.timestamp().getTime()) / (1000 * 60);    // ms * 1000 * 60 = min
-
-                    name = name + " / " + String.format("%d min", timeDiff);
-                    _paint.setColor(_repeaterColor);
-                    _bufferCanvas.drawCircle(_centerX + dx, _centerY + dy, 15, _paint);
-                    _bufferCanvas.drawText(name, 20, y - (40 * i++), _paint);
+                    _bufferCanvas.drawText(name, dx + 30, dy, _paint);
+                    _bufferCanvas.drawText(String.format("%d Minute(s) ago", timeDiff), dx + 30, dy + 35, _paint);
                 }
             }
 
@@ -550,32 +513,60 @@ public class MainActivity extends AppCompatActivity
                 _rotateMatrix.reset();
                 _rotateMatrix.postRotate(-_azimuth, viewCenterX, viewCenterY);
                 Bitmap rotateBitmap = Bitmap.createBitmap(_bufferBitmap, 0, 0, _bufferBitmap.getWidth(), _bufferBitmap.getHeight(), _rotateMatrix, true);
-                int rotateTransX = rotateBitmap.getWidth() / 2 - viewCenterX;
-                int rotateTransY = rotateBitmap.getHeight() / 2 - viewCenterY;
+                int rotateTransX = rotateBitmap.getWidth() / 2 - viewCenterX + _mapSizeExtend;
+                int rotateTransY = rotateBitmap.getHeight() / 2 - viewCenterY + _mapSizeExtend;
 
                 canvas.drawBitmap(rotateBitmap, -rotateTransX, -rotateTransY, null);
             }
             else {
-                canvas.drawBitmap(_bufferBitmap, 0, 0, null);
+                canvas.drawBitmap(_bufferBitmap, -_mapSizeExtend, -_mapSizeExtend, null);
             }
 
             if (_rotateMode != ROTATE_MODE.NONE) {
                 // draw triangle
                 int triLength = 24;
 
+                int triX = viewCenterX - _mapSizeExtend, triY = viewCenterY - _mapSizeExtend;
+
                 _triPath.reset();
-                _triPath.moveTo(viewCenterX - (triLength / 2), viewCenterY - (int)(Math.sqrt(3) * (triLength / 2)));
-                _triPath.lineTo(viewCenterX + (triLength / 2), viewCenterY - (int)(Math.sqrt(3) * (triLength / 2)));
-                _triPath.lineTo(viewCenterX, viewCenterY - (int)(Math.sqrt(3) * triLength));
+                _triPath.moveTo(triX - (triLength / 2), triY - (int)(Math.sqrt(3) * (triLength / 2)));
+                _triPath.lineTo(triX + (triLength / 2), triY - (int)(Math.sqrt(3) * (triLength / 2)));
+                _triPath.lineTo(triX, triY - (int)(Math.sqrt(3) * triLength));
                 _triPath.close();
 
                 canvas.save();
                 if (_rotateMode == ROTATE_MODE.TRIANGLE_ROTATE) {
-                    canvas.rotate(_azimuth, viewCenterX, viewCenterY);
+                    canvas.rotate(_azimuth, triX, triY);
                 }
                 _paint.setColor(Color.RED);
                 canvas.drawPath(_triPath, _paint);
                 canvas.restore();
+            }
+
+            if (_drawMode == DRAW_MODE.LIST_MODE) {
+                int i = 1;
+                for (String key : _livestockInfoMap.keySet()) {
+                    LivestockInfo info = _livestockInfoMap.get(key);
+                    Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), _distance);
+                    String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
+
+                    long timeDiff = (System.currentTimeMillis() - info.timestamp().getTime()) / (1000 * 60);    // ms * 1000 * 60 = min
+
+                    name = name + " / " + String.format("%d min", timeDiff);
+                    _paint.setColor(_livestockInfoMapColor.get(key));
+                    canvas.drawText(name, 20, 40 * i++, _paint);
+                }
+                for (String key : _repeaterInfoMap.keySet()) {
+                    LivestockInfo info = _repeaterInfoMap.get(key);
+                    Location.distanceBetween(_myGpsLocation.first, _myGpsLocation.second, info.latitude(), info.longitude(), _distance);
+                    String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
+
+                    long timeDiff = (System.currentTimeMillis() - info.timestamp().getTime()) / (1000 * 60);    // ms * 1000 * 60 = min
+
+                    name = name + " / " + String.format("%d min", timeDiff);
+                    _paint.setColor(_repeaterColor);
+                    canvas.drawText(name, 20, canvas.getHeight() - (40 * i++), _paint);
+                }
             }
         }
 
@@ -723,10 +714,12 @@ public class MainActivity extends AppCompatActivity
             return Pair.create(lon_dist * lon, lat_dist * lat);
         }
 
-        public void setCenter() {
+        public void setCenter(boolean rescaling) {
             _centerX = 0;
             _centerY = 0;
-            _scale = 40;
+            if (rescaling) {
+                _scale = 40;
+            }
             invalidate();
         }
     }
@@ -898,7 +891,7 @@ public class MainActivity extends AppCompatActivity
         fab_reset.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                _mapView.setCenter();
+                _mapView.setCenter(true);
             }
         });
 
@@ -910,7 +903,7 @@ public class MainActivity extends AppCompatActivity
             int index = (_rotateMode.ordinal() + 1 == ROTATE_MODE.values().length) ? 0 : _rotateMode.ordinal() + 1;
             _rotateMode = ROTATE_MODE.values()[index];
             String msg = "";
-            _mapView.setCenter();
+            _mapView.setCenter(false);
             switch (_rotateMode) {
                 case NONE: msg = "Compass Disabled"; break;
                 case MAP_ROTATE: msg = "Map Rotation Mode"; break;
