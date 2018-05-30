@@ -69,7 +69,9 @@ public class MainActivity extends AppCompatActivity
     private HashMap<String, LivestockInfo> _livestockInfoMap = new HashMap<>();
     private HashMap<String, LivestockInfo> _repeaterInfoMap = new HashMap<>();
     private HashMap<String, Integer> _livestockInfoMapColor = new HashMap<>();
-    private int _colorSet[] = { Color.MAGENTA, Color.BLUE, Color.rgb(183, 226, 180), Color.rgb(102, 0, 51), Color.rgb(51, 153, 255), Color.GREEN };
+    private int _colorSet[] = { Color.MAGENTA, Color.BLUE, Color.GREEN,
+                                Color.rgb(183, 226, 180), Color.rgb(102, 0, 51), Color.rgb(51, 153, 255),
+                                Color.rgb(195, 118, 215), Color.rgb(206, 223, 51), Color.rgb(240, 229, 75)};
     private int _repeaterColor = Color.GRAY;
     private HashMap<String, PinInfo> _pinInfoMap = new HashMap<>();
     private CheckerThread _checkerThread;
