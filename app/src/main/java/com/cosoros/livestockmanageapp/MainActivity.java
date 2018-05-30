@@ -883,7 +883,11 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         _dataBase = Database.getInstance(this);
-        _dataBase.insertSample("4");
+//        _dataBase.insertSample("4");
+//        Parser.parse("[619^59.000000^11^20180528^04326.998619^59.000000^11^20180528^043037^7.198242^0.0.1^0.1.1^]");
+//        Parser.parse("[[00550102030F010FB037.301151^127.003906^64.699997^11^20180528^050406^7.198242^0.0.1^0.1.1^]");
+//        Parser.parse("[55A5050000010FB037.301113^126.998062^62.799999^11^20180528^045941^7.198242^0.0.1^0.1.1^]");
+//        Parser.parse("[0054A40F030F010FC037.301247^126.998093^61.299999^9^20180528^051124^7.198242^0.0.1^0.1.1^]");
 
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);

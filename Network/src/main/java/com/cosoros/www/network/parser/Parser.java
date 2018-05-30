@@ -31,6 +31,7 @@ public class Parser {
     static final int _countSrc = 4, _countRpt = 4, _countDst = 4;
     static final int _countCmd = 2;
     static final int _headerSize = _countDatasize + _countSrc + _countRpt + _countDst + _countCmd;
+    static final String[] _ids = { "010F", "030F", "A50F", "A40F", "0102", "0103", "0104", "0105", "0302", "0303", "0304", "0305", "A502", "A503", "A504", "A505", "A402", "A403", "A404", "A405" };
 
     enum DATAINDEX {
         LAT,     // latitude.
@@ -69,6 +70,17 @@ public class Parser {
 
         // parse header info.
         String source = header.substring(4, 8);
+        boolean found = false;
+        for (int i = 0; i < _ids.length; ++i) {
+            if (_ids[i].equalsIgnoreCase(source)) {
+                found = true;
+                break;
+            }
+        }
+
+        if (found != true) {
+            return info;
+        }
         String repeater = header.substring(8, 12);
         String destination = header.substring(12, 16);
         String command = header.substring(16, 18);
