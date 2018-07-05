@@ -22,6 +22,7 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
@@ -33,13 +34,16 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -65,7 +69,8 @@ public class MainActivity extends AppCompatActivity
 
     private int _state = BluetoothService.STATE_NONE;
     private String _receiveBuffer = "";
-    private Pair<Double, Double> _myGpsLocation = new Pair<>(37.30362, 126.99712);
+//    private Pair<Double, Double> _myGpsLocation = new Pair<>(37.30362, 126.99712);
+    private Pair<Double, Double> _myGpsLocation = new Pair<>(42.757553, 79.266426);
     private HashMap<String, LivestockInfo> _livestockInfoMap = new HashMap<>();
     private HashMap<String, LivestockInfo> _repeaterInfoMap = new HashMap<>();
     private HashMap<String, Integer> _livestockInfoMapColor = new HashMap<>();
@@ -86,6 +91,7 @@ public class MainActivity extends AppCompatActivity
     private static final String _regex = ".{3}F";
     private boolean _exitRequested = false;
     private static final int _mapSizeExtend = 500;
+    private ConstraintLayout _cLayout;
 
     enum ROTATE_MODE {
         NONE,
@@ -207,13 +213,24 @@ public class MainActivity extends AppCompatActivity
             }
         }
 
+        protected float[] lowPass(float[] input, float[] output) {
+            if (output == null) return input;
+
+            float alpha = 0.2f;
+            for (int i = 0; i < input.length; i++) {
+                output[i] = output[i] + alpha * (input[i] - output[i]);
+            }
+
+            return output;
+        }
+
         @Override
         public void onSensorChanged(SensorEvent event) {
             if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-                _gravity = event.values;
+                _gravity = lowPass(event.values.clone(), _gravity);
             }
             else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-                _geomagnetic = event.values;
+                _geomagnetic = lowPass(event.values.clone(), _geomagnetic);
             }
             if (_gravity != null && _geomagnetic != null) {
                 float R[] = new float[9];
@@ -222,7 +239,9 @@ public class MainActivity extends AppCompatActivity
                 if (success) {
                     float orientation[] = new float[3];
                     SensorManager.getOrientation(R, orientation);
-                    float azimuth = (int)Math.toDegrees(orientation[0]);
+        /*
+                    float azimuth = (float)Math.toDegrees(orientation[0]);
+
                     int previousIndex = _index - 1;
                     if (previousIndex < 0) previousIndex = 7;
 
@@ -240,13 +259,17 @@ public class MainActivity extends AppCompatActivity
                     _azimuths[_index++] = azimuth;
                     if (_index == 8) _index = 0;
                     _azimuth = averageAzimuth();
+        */
                     //_pitch = (float)Math.toDegrees(orientation[1]);
                     //_roll = (float)Math.toDegrees(orientation[2]);
+                    _azimuth = (float)Math.toDegrees(orientation[0]);
+                    if (_azimuth < 0)
+                        _azimuth = _azimuth + 360;
                     Log.d("Azimuth","" + _azimuth);
                     _mapView.invalidate();
                 }
-                _gravity = null;
-                _geomagnetic = null;
+//                _gravity = null;
+//                _geomagnetic = null;
             }
         }
 
@@ -346,6 +369,7 @@ public class MainActivity extends AppCompatActivity
                     LivestockInfo info = Parser.parse(data);
                     synchronized (_livestockInfoMap) {
                         _dataBase.insert("lwd_history", data, info, _myGpsLocation);
+                        info = Parser.parse(info.source(), info);
 
                         if (info.source().matches(_regex)) {
                             _repeaterInfoMap.put(info.source(), info);
@@ -439,10 +463,19 @@ public class MainActivity extends AppCompatActivity
                 String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
 
                 int dx = viewCenterX - (int)(point.first * _scale);
-                int dy = viewCenterY - (int)(point.second * _scale);
+                int dy = viewCenterY + (int)(point.second * _scale);
 
                 _paint.setColor(_livestockInfoMapColor.get(key));
                 _bufferCanvas.drawCircle(dx, dy, 15, _paint);
+
+
+                ImageView iv = _cLayout.findViewWithTag(key);
+                ConstraintLayout.LayoutParams clParams = (ConstraintLayout.LayoutParams)iv.getLayoutParams();
+                DisplayMetrics dm = getResources().getDisplayMetrics();
+                clParams.leftMargin = Math.round(dx / dm.density);;
+                clParams.topMargin = Math.round(dy / dm.density);;
+                iv.setLayoutParams(clParams);
+
 
                 if (_drawMode == DRAW_MODE.MAP_MODE) {
                     long timeDiff = (System.currentTimeMillis() - info.timestamp().getTime()) / (1000 * 60);    // ms * 1000 * 60 = min
@@ -460,7 +493,7 @@ public class MainActivity extends AppCompatActivity
                 String name = "[" + info.source() + "]" + Float.toString((float) Math.round(_distance[0]) / 1000) + "km";
 
                 int dx = viewCenterX - (int)(point.first * _scale);
-                int dy = viewCenterY - (int)(point.second * _scale);
+                int dy = viewCenterY + (int)(point.second * _scale);
 
                 _paint.setColor(_repeaterColor);
                 _bufferCanvas.drawCircle(dx, dy, 15, _paint);
@@ -753,6 +786,7 @@ public class MainActivity extends AppCompatActivity
 
                 lwd_id = key.getString(i);
                 dataDetail = data.getJSONObject(lwd_id);
+                makeNewLayout(lwd_id);
                 if (lwd_id.matches(_regex)) {
                     _repeaterInfoMap.put(lwd_id, Parser.parse(lwd_id, dataDetail));
                 } else {
@@ -779,6 +813,19 @@ public class MainActivity extends AppCompatActivity
         } catch (JSONException e) {
             e.printStackTrace();
         }
+    }
+
+    private void makeNewLayout(String lwd_id) {
+//        LayoutInflater mInflater = (LayoutInflater)getSystemService(LAYOUT_INFLATER_SERVICE);
+//        ConstraintLayout mRootLayout = (ConstraintLayout)findViewById(R.id.layout_view);
+//        mInflater.inflate(R.layout.layout_location_image, mRootLayout, true);
+
+        _cLayout = (ConstraintLayout)findViewById(R.id.layout_view);
+        ImageView iv = new ImageView(this);
+        iv.setTag(lwd_id);
+        iv.setImageResource(R.mipmap.ic_launcher);
+        iv.setLayoutParams(new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT, ConstraintLayout.LayoutParams.WRAP_CONTENT));
+        _cLayout.addView(iv);
     }
 
     private void pinSelectCategories() {
@@ -885,11 +932,12 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         _dataBase = Database.getInstance(this);
-//        _dataBase.insertSample("4");
+//        _dataBase.insertSample("3");
 //        Parser.parse("[619^59.000000^11^20180528^04326.998619^59.000000^11^20180528^043037^7.198242^0.0.1^0.1.1^]");
 //        Parser.parse("[[00550102030F010FB037.301151^127.003906^64.699997^11^20180528^050406^7.198242^0.0.1^0.1.1^]");
 //        Parser.parse("[55A5050000010FB037.301113^126.998062^62.799999^11^20180528^045941^7.198242^0.0.1^0.1.1^]");
 //        Parser.parse("[00540108030F010FC037.301247^126.998093^61.299999^9^20180528^051124^7.198242^0.0.1^0.1.1^]");
+//        _dataBase.deleteData();
 
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -930,7 +978,7 @@ public class MainActivity extends AppCompatActivity
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        LinearLayout layout = findViewById(R.id.layout_view);
+        ConstraintLayout layout = findViewById(R.id.layout_view);
         _mapView = new MapView(this);
         layout.addView(_mapView);
 
